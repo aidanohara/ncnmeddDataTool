@@ -17,6 +17,7 @@ library(tidyverse)
 library(censusapi)
 library(acs)
 library(tidycensus)
+library(maptools)
 
 ```
 
@@ -29,17 +30,41 @@ Low to Moderate Income percentage:
 Grant Dollars Received: 
 Gross Receipts Tax:
 Population Demographics:
+```{r census backing}
+vars <- listCensusMetadata(
+  name = "2019/acs/acs5",
+  type = "variables"
+)
+```
 
 ```{r ACS population}
 my.geo <- geo.make(state=35,county=c(007,028,033,039,043,047,049,055),tract="*")
 
-test <- acs.fetch(endyear = 2018, span = 5, geography = my.geo , table.number="B01003",key = key)
+
+#fetching tables is very slow, we might want to look into having ACS data sotred locally for retrieval 
+
+#find table specifics (2018) here: https://www2.census.gov/programs-surveys/acs/tech_docs/table_shells/2018/
+# "B01003" - Total Population
+# "B19055" - 1. Total (households) 2. With Social Security Income 3. No Social Security Income
+# "B25122" - 1. Total (renter occupied housing units)
+# "B19059" - 1. Total (households) 2. With Retirement Income 3. No Retirement Income
+# "B19101" - 1. Total (families)
+
+
+test <- acs.fetch(endyear = 2018, span = 5, geography = my.geo , table.number=c("B01003","B19055","B25122","B19059","B19101"),key = key)
 head(test@estimate)
+
+
+
+acs_data <- as_tibble(cbind(test@geography,test@estimate))
+
 
 # LMI calculation P009003/P009004
 ```
 
 ```{r map}
-
+popmap <- leaflet() %>%
+  addTiles() %>%
+  addPolygons(my.geo@geo.list)
 
 ```
