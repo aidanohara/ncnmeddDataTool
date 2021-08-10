@@ -1,0 +1,47 @@
+---
+title: "AT Data Tool Ideas"
+author: "Alison Turner"
+date: "8/9/2021"
+output:
+  html_document:
+    df_print: paged
+---
+
+## NCNMEDD CEDS Data Tool
+The 2021-2026 Comprehensive Economic Development Strategy looked to integrate more quantitative methods into the region's plans, strategies, and actions. This tool was developed using all open data in order for our members to better understand the region from the perspective of recorded data and for the NCNMEDD to address national issues of representation and better convene members to enact regional economic development goals. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(censusapi)
+library(acs)
+library(tidycensus)
+
+api.key.install()
+key <- "cf4b28281454ae6786cde2783cf970c323320cba"
+```
+
+# Data Selection 
+
+Population: ACS 
+Per Capita Income: ACS
+Unemployment:
+Low to Moderate Income percentage:
+Grant Dollars Received: 
+Gross Receipts Tax:
+Population Demographics:
+
+```{r ACS population}
+my.geo <- geo.make(state=35,county=c(007,028,033,039,043,047,049,055),tract="*")
+
+test <- acs.fetch(endyear = 2018, span = 5, geography = my.geo , table.number="B01003",key = key)
+head(test@estimate)
+
+# LMI calculation P009003/P009004
+```
+
+```{r map}
+
+
+```
