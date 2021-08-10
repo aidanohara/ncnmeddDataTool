@@ -5,7 +5,7 @@ library(censusapi)
 #Census API setup
 # visit https://api.census.gov/data/key_signup.html
 # for your very own apikey!
-Sys.setenv(CENSUS_KEY='1970b8219ecf68bbae17336e39061ec7d2c21438')
+Sys.setenv(CENSUS_KEY=='Your_Key_Here')
 readRenviron("~/.Renviron")
 Sys.getenv("CENSUS_KEY")
 
