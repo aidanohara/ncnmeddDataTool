@@ -46,7 +46,7 @@ View(vars)
 #Taos -- 055
 #Colfax -- 007
 
-acsCountyFips <- c("049","028","039","047","043","003","005","007")
+acsCountyFips <- c("049","028","039","047","043","003","055","007")
 
 
 
@@ -97,6 +97,9 @@ getGroupVariables <- function(groupName) {
     group = groupName)
 }
 
+getGroupVariables("B01003")
+
+
 #ex: getGroupVariables("B19013")
 
 # build a df for a variable group's observations in ALL counties
@@ -113,6 +116,8 @@ concatenateACSRawData <- function(groupVariable,year,term) {
   return(rawData)
 }
 
+
+group_B01003RawDataTest <- concatenateACSRawData("group(B01003)","2014","5")
 
 # NEXT STEPS
 #  - add state and national observations to df,
