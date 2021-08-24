@@ -5,35 +5,29 @@ library(censusapi)
 #Census API setup
 # visit https://api.census.gov/data/key_signup.html
 # for your very own apikey!
-Sys.setenv(CENSUS_KEY=='Your_Key_Here')
+Sys.setenv(CENSUS_KEY='')
 readRenviron("~/.Renviron")
 Sys.getenv("CENSUS_KEY")
 
-surveyACS52019 <- "2019/acs/acs5"
+
+### ACS data retrieval ###
+
+#specifics
+# survey name: /acs/acs
+# survey term: only 5 year has ALL counties
+# year: 2009, 2014, 2019
+# years, for acs5, 2019,2014,2011...
+# years, for acs1, 2019,2018,2017...
+
+# example survey key
+#surveyACS52019 <- "2019/acs/acs5"
+
 acsYearAndTermKey <- function(year, term) {
   return(paste(year,"/acs/acs",term, sep = ""))
 }
 
 
-#tests for censusapi library
-apis <- listCensusApis()
-View(apis)
-
-geos <- listCensusMetadata(
-  name = surveyACS52019, #2019 ACS 5 year community survey
-  type = "geography"
-)
-View(geos)
-
-vars <- listCensusMetadata(
-  name = surveyACS52019,
-  type = "variables"
-)
-View(vars)
-
-
-# years, for acs5, 2019,2014,2011...
-# years, for acs1, 2019,2018,2017...
+# geos
 
 # acs geos
 #List of County refIDs
@@ -46,22 +40,103 @@ View(vars)
 #Taos -- 055
 #Colfax -- 007
 
-acsCountyFips <- c("049","028","039","047","043","003","055","007")
+acsCountyFips <- c("049","028","039","047","043","033","055","007")
+
+# variables
+# variable names
+
+# variables or groups, following is an earmarked list of groups
+
+aBigListOVariables <- c("group(B01003)",
+                        "group(B02001)",
+                        "group(B25011)",
+                        "group(B25001)",
+                        "group(B25003)",
+                        "group(B11001)")
+ 
+# ear-marked census variables
+eMCensusVars <- c("B01003_001E",
+                                  "B02001_002E",
+                                  "B02001_003E",
+                                  "B02001_004E",
+                                  "B02001_005E",
+                                  "B02001_006E",
+                                  "B02001_007E",
+                                  "B02001_008E",
+                                  "B02001_009E",
+                                  "B02001_010E",
+                                  "B25011_002E",
+                                  "B25011_003E",
+                                  "B25011_004E",
+                                  "B25011_005E",
+                                  "B25011_006E",
+                                  "B25011_007E",
+                                  "B25011_008E",
+                                  "B25011_009E",
+                                  "B25011_010E",
+                                  "B25011_011E",
+                                  "B25011_012E",
+                                  "B25011_013E",
+                                  "B25011_014E",
+                                  "B25011_015E",
+                                  "B25011_016E",
+                                  "B25011_017E",
+                                  "B25011_018E",
+                                  "B25011_019E",
+                                  "B25011_020E",
+                                  "B25011_021E",
+                                  "B25011_022E",
+                                  "B25011_023E",
+                                  "B25011_024E",
+                                  "B25011_025E",
+                                  "B25011_026E",
+                                  "B25011_027E",
+                                  "B25011_028E",
+                                  "B25011_029E",
+                                  "B25011_030E",
+                                  "B25011_031E",
+                                  "B25011_032E",
+                                  "B25011_033E",
+                                  "B25011_034E",
+                                  "B25011_035E",
+                                  "B25011_036E",
+                                  "B25011_037E",
+                                  "B25011_038E",
+                                  "B25011_039E",
+                                  "B25011_040E",
+                                  "B25011_041E",
+                                  "B25011_042E",
+                                  "B25011_043E",
+                                  "B25011_044E",
+                                  "B25011_045E",
+                                  "B25011_046E",
+                                  "B25011_047E",
+                                  "B25011_048E",
+                                  "B25011_049E")
+
+variableNames2019 <- listCensusMetadata("acs/acs5", vintage = 2019,
+                                    type = "variables", group = NULL)
+
+variableNames2014 <- listCensusMetadata("acs/acs5", vintage = 2014,
+                                    type = "variables", group = NULL)
 
 
+#functions to retrieve data from the census 
+#   given a variable, variables, or variable group name
 
-#functions to retrieve 5 year acs 2019 data from the census 
-#   given a variable, or variable group name
+# countyGeoTag <- "049"
+# includedVariables <- "B01003
+
 getCountyData <- function(countyGeoTag, includedVariables, surveyName) {
   getCensus(
-  name = surveyName,
-  vars = c("NAME", includedVariables),
-  region = paste("county:", countyGeoTag),
-  regionin = "state:35"
-)
+    name = surveyName,
+    vars = c("NAME", includedVariables),
+    region = paste("county:", countyGeoTag),
+    regionin = "state:35"
+  )
 }
 
-getStateData <- function(surveyName, includedVariables) {
+getNMStateData <- function(includedVariables, surveyName) {
   getCensus(
     name = surveyName,
     vars = c("NAME", includedVariables),
@@ -78,15 +153,71 @@ getNationData <- function(includedVariables, surveyName) {
   )
 }
 
-# variables or groups, following is an earmarked list of groups
+# The ultimate ACS Retrieval OSS for NCNM DATA  #
 
-aBigListOVariables <- c("group(B01003)",
-                        "group(B02001)",
-                        "group(B25011)",
-                        "group(B25001)",
-                        "group(B25003)",
-                        "group(B11001)")
+aCSDataRetriever <- function(year,term) {
+  # sets the survey name
+  surveyName <- acsYearAndTermKey(year,term)
+  
+  # Fixed variables and location for now, can vary in the future.
+  varsToRetrieve <- eMCensusVars
+  localsToRetrieve <- acsCountyFips
+  
+  #get the data for each geo level, county, state, nation
+  countyParts <- lapply(localsToRetrieve, getCountyData, 
+                        varsToRetrieve, surveyName)
+  
+  natPart <- getNationData(varsToRetrieve, surveyName)
+  
+  statPart <- getNMStateData(varsToRetrieve, surveyName)
+  
+  # concatenate the different dfs into one
+  rawData <- bind_rows(countyParts)
+  rawData <- gtools::smartbind(rawData, natPart, statPart , fill = NA)
+  
+  namesMatched <- 
+  
+  return(rawData)
+}
 
+
+
+#switching to the variables labels instead of their names.
+namesMatched <- transfer[transfer$name %in% names(single_B01003_001ETest),]
+
+names(single_B01003_001ETest)[match(namesMatched[,"name"], names(single_B01003_001ETest))] = namesMatched[,"label"]
+
+
+
+
+
+#tests for censusapi library
+
+#on the chopping block for non-necessity
+apis <- listCensusApis()
+View(apis)
+
+geos <- listCensusMetadata(
+  name = surveyACS52019, #2019 ACS 5 year community survey
+  type = "geography"
+)
+View(geos)
+
+vars <- listCensusMetadata(
+  name = surveyACS52019,
+  type = "variables"
+)
+View(vars)
+
+
+
+
+
+
+
+
+
+                                  
 
 # a function to read variables names, given a group name
 getGroupVariables <- function(groupName) {
@@ -100,25 +231,25 @@ getGroupVariables <- function(groupName) {
 getGroupVariables("B01003")
 
 
+
 #ex: getGroupVariables("B19013")
+
+#variableNames <- listCensusMetadata("acs/acs5", vintage = 2019, 
+#                                    type = "variables", group = NULL)
+# retrieves the specific variable names for acs5 2019, ALL variable names...
+#   may be overdoing it a bit here, might be the move to go for groups, one at
+#   a time.
 
 # build a df for a variable group's observations in ALL counties
 group_B01003parts <- lapply(countyFips,getCountyData,"group(B01003)")
 group_B01003df <- bind_rows(group_B01003parts, .id = "column_label")
 
-concatenateACSRawData <- function(groupVariable,year,term) {
-  surveyName <- acsYearAndTermKey(year,term)
-  parts <- lapply(acsCountyFips, getCountyData, groupVariable, surveyName)
-  natPart <- getNationData(groupVariable, surveyName)
-  statPart <- getStateData(surveyName, groupVariable)
-  rawData <- bind_rows(parts)
-  rawData <- gtools::smartbind(rawData, natPart, statPart , fill = NA)
-  return(rawData)
-}
-
 
 group_B01003RawDataTest <- concatenateACSRawData("group(B01003)","2014","5")
+single_B01003_001ETest <- concatenateACSRawData("B01003_001E","2014", "5")
 
+
+                         
 # NEXT STEPS
 #  - add state and national observations to df,
 #  - streamline retrieving another group of variables, 
