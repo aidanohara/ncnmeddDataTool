@@ -187,9 +187,11 @@ getNationData <- function(includedVariables, surveyName) {
 
 
 
-# The ultimate ACS Retrieval OSS for NCNM DATA  #
+# The sub-ultimate ACS Retrieval OSS for NCNM DATA  #
 
-aCSDataRetriever <- function(year,term) {
+aCS5DataRetriever <- function(year) {
+  #ACS county data for all NCNM is only available for 5 year surveys
+  term = "5"  
   # sets the survey name
   surveyName <- acsYearAndTermKey(year,term)
   
@@ -207,15 +209,19 @@ aCSDataRetriever <- function(year,term) {
   
   # concatenate the different dfs into one
   rawData <- bind_rows(countyParts)
-  rawData <- gtools::smartbind(rawData, natPart, statPart , fill = NA)
+  rawData <- gtools::smartbind(rawData, statPart, natPart,  fill = NA)
   
   # switch census variable names for their corresponding labels
-  labeledData <- renameVariables(rawDataf, year, term)
+  labeledData <- renameVariables(rawData, year, term)
   
   return(labeledData)
 }
 
 
+
+acs5Data2009 <- aCS5DataRetriever(2009) 
+acs5Data2014 <- aCS5DataRetriever(2014)
+acs5Data2019 <- aCS5DataRetriever(2019)
 
 
 
@@ -225,20 +231,20 @@ aCSDataRetriever <- function(year,term) {
 #tests for censusapi library
 
 #on the chopping block for non-necessity
-apis <- listCensusApis()
-View(apis)
+#apis <- listCensusApis()
+#View(apis)
 
-geos <- listCensusMetadata(
-  name = surveyACS52019, #2019 ACS 5 year community survey
-  type = "geography"
-)
-View(geos)
+#geos <- listCensusMetadata(
+#  name = surveyACS52019, #2019 ACS 5 year community survey
+#  type = "geography"
+#)
+#View(geos)
 
-vars <- listCensusMetadata(
-  name = surveyACS52019,
-  type = "variables"
-)
-View(vars)
+#vars <- listCensusMetadata(
+#  name = surveyACS52019,
+#  type = "variables"
+#)
+#View(vars)
 
 
 
@@ -258,12 +264,12 @@ View(vars)
 #   a time.
 
 # build a df for a variable group's observations in ALL counties
-group_B01003parts <- lapply(countyFips,getCountyData,"group(B01003)")
-group_B01003df <- bind_rows(group_B01003parts, .id = "column_label")
+#group_B01003parts <- lapply(countyFips,getCountyData,"group(B01003)")
+#group_B01003df <- bind_rows(group_B01003parts, .id = "column_label")
 
 
-group_B01003RawDataTest <- concatenateACSRawData("group(B01003)","2014","5")
-single_B01003_001ETest <- concatenateACSRawData("B01003_001E","2014", "5")
+#group_B01003RawDataTest <- concatenateACSRawData("group(B01003)","2014","5")
+#single_B01003_001ETest <- concatenateACSRawData("B01003_001E","2014", "5")
 
 
                          
