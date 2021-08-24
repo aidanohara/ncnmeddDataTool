@@ -23,7 +23,7 @@ Sys.getenv("CENSUS_KEY")
 #surveyACS52019 <- "2019/acs/acs5"
 
 acsYearAndTermKey <- function(year, term) {
-  return(paste(year,"/acs/acs",term, sep = ""))
+  return(paste(year, "/acs/acs", term, sep = ""))
 }
 
 
@@ -47,12 +47,14 @@ acsCountyFips <- c("049","028","039","047","043","033","055","007")
 
 # variables or groups, following is an earmarked list of groups
 
-aBigListOVariables <- c("group(B01003)",
-                        "group(B02001)",
-                        "group(B25011)",
-                        "group(B25001)",
-                        "group(B25003)",
-                        "group(B11001)")
+#aBigListOVariables <- c("group(B01003)",
+#                        "group(B02001)",
+#                        "group(B25011)",
+#                        "group(B25001)",
+#                        "group(B25003)",
+#                        "group(B11001)")
+#
+
  
 # ear-marked census variables
 eMCensusVars <- c("B01003_001E",
@@ -114,11 +116,41 @@ eMCensusVars <- c("B01003_001E",
                                   "B25011_048E",
                                   "B25011_049E")
 
-variableNames2019 <- listCensusMetadata("acs/acs5", vintage = 2019,
-                                    type = "variables", group = NULL)
+groupsForVariables <- c("B01003",
+                        "B02001",
+                        "B25011",
+                        "B25001",
+                        "B25003",
+                        "B11001")
 
-variableNames2014 <- listCensusMetadata("acs/acs5", vintage = 2014,
-                                    type = "variables", group = NULL)
+# a function to read variables names, given a group name
+getGroupVariables <- function(groupName, year, term) {
+  listCensusMetadata(
+    name = paste("acs/acs", term, sep = ""),
+    vintage = year,
+    type = "variables",
+    group = groupName)
+}
+
+#getGroupVariables("B01003", 2019, "5")
+
+
+#switching to the variables labels instead of their names.
+#namesMatched <- transfer[transfer$name %in% names(single_B01003_001ETest),]
+#names(single_B01003_001ETest)[match(namesMatched[,"name"], 
+#     names(single_B01003_001ETest))] = namesMatched[,"label"]
+
+renameVariables <- function(rawData, year, term){
+  refList <- bind_rows(lapply(groupsForVariables, getGroupVariables,
+                              year, term))
+  refListLess <- (refList[,c("name","label")])
+  matchVars <- refListLess[refListLess$name %in% names(rawData),]
+  names(rawData)[match(matchVars[,"name"],names(rawData))] = matchVars[,"label"]
+  return(rawData)
+}
+
+
+
 
 
 #functions to retrieve data from the census 
@@ -153,6 +185,8 @@ getNationData <- function(includedVariables, surveyName) {
   )
 }
 
+
+
 # The ultimate ACS Retrieval OSS for NCNM DATA  #
 
 aCSDataRetriever <- function(year,term) {
@@ -175,17 +209,14 @@ aCSDataRetriever <- function(year,term) {
   rawData <- bind_rows(countyParts)
   rawData <- gtools::smartbind(rawData, natPart, statPart , fill = NA)
   
-  namesMatched <- 
+  # switch census variable names for their corresponding labels
+  labeledData <- renameVariables(rawDataf, year, term)
   
-  return(rawData)
+  return(labeledData)
 }
 
 
 
-#switching to the variables labels instead of their names.
-namesMatched <- transfer[transfer$name %in% names(single_B01003_001ETest),]
-
-names(single_B01003_001ETest)[match(namesMatched[,"name"], names(single_B01003_001ETest))] = namesMatched[,"label"]
 
 
 
@@ -219,20 +250,6 @@ View(vars)
 
                                   
 
-# a function to read variables names, given a group name
-getGroupVariables <- function(groupName) {
-  listCensusMetadata(
-    name = "acs/acs5",
-    vintage = 2019,
-    type = "variables",
-    group = groupName)
-}
-
-getGroupVariables("B01003")
-
-
-
-#ex: getGroupVariables("B19013")
 
 #variableNames <- listCensusMetadata("acs/acs5", vintage = 2019, 
 #                                    type = "variables", group = NULL)
