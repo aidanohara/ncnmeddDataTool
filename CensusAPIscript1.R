@@ -199,6 +199,8 @@ aCS5DataRetriever <- function(year) {
   varsToRetrieve <- eMCensusVars
   localsToRetrieve <- acsCountyFips
   
+  tractParts <- lapply(localsToRetrieve, getCountyTractData,
+                       varsToRetrieve, surveyName)
   #get the data for each geo level, county, state, nation
   countyParts <- lapply(localsToRetrieve, getCountyData, 
                         varsToRetrieve, surveyName)
@@ -208,8 +210,9 @@ aCS5DataRetriever <- function(year) {
   statPart <- getNMStateData(varsToRetrieve, surveyName)
   
   # concatenate the different dfs into one
-  rawData <- bind_rows(countyParts)
-  rawData <- gtools::smartbind(rawData, statPart, natPart,  fill = NA)
+  rawTractData <- bind_rows(tractParts)
+  rawCountyData <- bind_rows(countyParts)
+  rawData <- gtools::smartbind(rawTractData, rawCountyData, statPart, natPart,  fill = NA)
   
   # switch census variable names for their corresponding labels
   labeledData <- renameVariables(rawData, year, term)
@@ -220,10 +223,38 @@ aCS5DataRetriever <- function(year) {
 
 
 acs5Data2009 <- aCS5DataRetriever(2009) 
+acs5Data2010 <- aCS5DataRetriever(2010)
 acs5Data2014 <- aCS5DataRetriever(2014)
 acs5Data2019 <- aCS5DataRetriever(2019)
 
+retrieveAndWriteAcs5YearData <- function(year) {
+  df <- aCS5DataRetriever(year)
+  write.csv(df,paste("C:\\RStudioProjects\\DATA MANGLER\\acs5Data",
+                     year,".csv", sep = ""))
+}
 
+
+# Tract Retrieval #
+
+#acs_income_group <- getCensus(
+#  name = "acs/acs5", 
+#  vintage = 2017, 
+#  vars = c("NAME", "group(B19013)"), 
+#  region = "tract:*", 
+#  regionin = "state:02")
+
+# I think the move here is an lapply/bind_rows application
+
+# ply our list of counties against the api, calling for all their census tracts
+
+getCountyTractData <- function(countyGeoTag, includedVariables, surveyName) {
+  getCensus(
+    name = surveyName,
+    vars = c("NAME", includedVariables),
+    region = "tract:*",
+    regionin = paste("state:35+county:",countyGeoTag)
+  )
+}
 
 
 
