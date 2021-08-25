@@ -229,9 +229,25 @@ acs5Data2019 <- aCS5DataRetriever(2019)
 
 retrieveAndWriteAcs5YearData <- function(year) {
   df <- aCS5DataRetriever(year)
-  write.csv(df,paste("C:\\RStudioProjects\\DATA MANGLER\\acs5Data",
+  write.csv(df,paste("C:\\RStudioProjects\\ncnmeddDataTool\\acs5Data",
                      year,".csv", sep = ""))
 }
+
+yearsToRetrieve <- c(2010,
+                     2011,
+                     2012,
+                     2013,
+                     2014,
+                     2015,
+                     2016,
+                     2017,
+                     2018,
+                     2019)
+
+# test run
+retrieveAndWriteAcs5YearData(2009)
+
+lapply(yearsToRetreive, retrieveAndWriteAcs5YearData)
 
 
 # Tract Retrieval #
