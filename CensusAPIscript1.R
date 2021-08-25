@@ -1,3 +1,8 @@
+#title: ACS 5 year survey retrieval for NCNM
+#author: Aidan O'Hara
+#date: 8/25/2021
+
+
 #libraries
 library(dplyr)
 library(censusapi)
@@ -15,13 +20,10 @@ Sys.getenv("CENSUS_KEY")
 #specifics
 # survey name: /acs/acs
 # survey term: only 5 year has ALL counties
-# year: 2009, 2014, 2019
-# years, for acs5, 2019,2014,2011...
-# years, for acs1, 2019,2018,2017...
+# years: 2009-2015
 
 # example survey key
 #surveyACS52019 <- "2019/acs/acs5"
-
 acsYearAndTermKey <- function(year, term) {
   return(paste(year, "/acs/acs", term, sep = ""))
 }
@@ -185,6 +187,23 @@ getNationData <- function(includedVariables, surveyName) {
   )
 }
 
+# Tract Retrieval #
+
+#acs_income_group <- getCensus(
+#  name = "acs/acs5", 
+#  vintage = 2017, 
+#  vars = c("NAME", "group(B19013)"), 
+#  region = "tract:*", 
+#  regionin = "state:02")
+
+getCountyTractData <- function(countyGeoTag, includedVariables, surveyName) {
+  getCensus(
+    name = surveyName,
+    vars = c("NAME", includedVariables),
+    region = "tract:*",
+    regionin = paste("state:35+county:",countyGeoTag)
+  )
+}
 
 
 # The sub-ultimate ACS Retrieval OSS for NCNM DATA  #
@@ -220,113 +239,55 @@ aCS5DataRetriever <- function(year) {
   return(labeledData)
 }
 
-
-
-acs5Data2009 <- aCS5DataRetriever(2009) 
-acs5Data2010 <- aCS5DataRetriever(2010)
-acs5Data2014 <- aCS5DataRetriever(2014)
+#Retrieves census tract, county, state, and national data for NCNM
 acs5Data2019 <- aCS5DataRetriever(2019)
 
+#Use this function to rapidly retrieve the ACS data for a given year
 retrieveAndWriteAcs5YearData <- function(year) {
   df <- aCS5DataRetriever(year)
-  write.csv(df,paste("C:\\RStudioProjects\\DATA MANGLER\\acs5Data",
+  write.csv(df,paste("C:\\RStudioProjects\\ncnmeddDataTool\\acs5Data",
                      year,".csv", sep = ""))
 }
 
+#A list of the available years, minus 2009, to make sure everything is
+#    operational before trying to retrieve ALL years
+yearToRetrieve <- c(2010,
+                     2011,
+                     2012,
+                     2013,
+                     2014,
+                     2015,
+                     2016,
+                     2017,
+                     2018,
+                     2019)
 
-# Tract Retrieval #
-
-#acs_income_group <- getCensus(
-#  name = "acs/acs5", 
-#  vintage = 2017, 
-#  vars = c("NAME", "group(B19013)"), 
-#  region = "tract:*", 
-#  regionin = "state:02")
-
-# I think the move here is an lapply/bind_rows application
-
-# ply our list of counties against the api, calling for all their census tracts
-
-getCountyTractData <- function(countyGeoTag, includedVariables, surveyName) {
-  getCensus(
-    name = surveyName,
-    vars = c("NAME", includedVariables),
-    region = "tract:*",
-    regionin = paste("state:35+county:",countyGeoTag)
-  )
-}
+# test run using 2009
+retrieveAndWriteAcs5YearData(2009)
+# retrieves and writes to csv for the years in yearsToRetrieve
+lapply(yearsToRetrieve, retrieveAndWriteAcs5YearData)
 
 
 
 
-#tests for censusapi library
+# informative Census API functions
 
-#on the chopping block for non-necessity
 #apis <- listCensusApis()
 #View(apis)
 
 #geos <- listCensusMetadata(
 #  name = surveyACS52019, #2019 ACS 5 year community survey
-#  type = "geography"
-#)
+#  type = "geography")
 #View(geos)
 
 #vars <- listCensusMetadata(
 #  name = surveyACS52019,
-#  type = "variables"
-#)
+#  type = "variables")
 #View(vars)
-
-
-
-
-
-
-
-
-
-                                  
-
 
 #variableNames <- listCensusMetadata("acs/acs5", vintage = 2019, 
 #                                    type = "variables", group = NULL)
-# retrieves the specific variable names for acs5 2019, ALL variable names...
-#   may be overdoing it a bit here, might be the move to go for groups, one at
-#   a time.
 
-# build a df for a variable group's observations in ALL counties
-#group_B01003parts <- lapply(countyFips,getCountyData,"group(B01003)")
-#group_B01003df <- bind_rows(group_B01003parts, .id = "column_label")
-
-
-#group_B01003RawDataTest <- concatenateACSRawData("group(B01003)","2014","5")
-#single_B01003_001ETest <- concatenateACSRawData("B01003_001E","2014", "5")
-
-
-                         
-# NEXT STEPS
-#  - add state and national observations to df,
-#  - streamline retrieving another group of variables, 
-#     - cbind to build a single dataframe...
-
-
-
-
-
-# EXPERIMENT ZONE enter at your own risk
-#   efforts to retrieve all group variable data for all counties
-
-#combined <- expand.grid(countyFips, aBigListOVariables)
-#test <- mapply(getCountyData, combined[,1], combined[,2])
-
-
-#function testing
-#test inclusded variables ""IPRCAT", "IPR_DESC", "PCTUI_PT"" 
-#testIncluded <- c("IPRCAT", "IPR_DESC", "PCTUI_PT")
-#testIncluded2 <- c("B01001_001E")
-#getNationData(testIncluded2)
-#getStateData(testIncluded2)
-#getCountyData("007",testIncluded2)
 
 
 
