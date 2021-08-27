@@ -251,7 +251,7 @@ retrieveAndWriteAcs5YearData <- function(year) {
 
 #A list of the available years, minus 2009, to make sure everything is
 #    operational before trying to retrieve ALL years
-yearToRetrieve <- c(2010,
+yearsToRetrieve <- c(2010,
                      2011,
                      2012,
                      2013,
@@ -261,6 +261,13 @@ yearToRetrieve <- c(2010,
                      2017,
                      2018,
                      2019)
+
+
+# test run
+retrieveAndWriteAcs5YearData(2009)
+
+lapply(yearsToRetreive, retrieveAndWriteAcs5YearData)
+
 
 # test run using 2009
 retrieveAndWriteAcs5YearData(2009)
