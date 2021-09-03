@@ -10,7 +10,7 @@ library(censusapi)
 #Census API setup
 # visit https://api.census.gov/data/key_signup.html
 # for your very own apikey!
-Sys.setenv(CENSUS_KEY='')
+Sys.setenv(CENSUS_KEY='1970b8219ecf68bbae17336e39061ec7d2c21438')
 readRenviron("~/.Renviron")
 Sys.getenv("CENSUS_KEY")
 
@@ -58,9 +58,9 @@ acsCountyFips <- c("049","028","039","047","043","033","055","007")
 #
 
  
-# ear-marked census variables
-eMCensusVars <- c("B01003_001E",
-                                  "B02001_002E",
+# ear-marked census variables, I think only part of the whole list...
+eMCensusVars <- c("B01003_001E", #Total Population
+                                  "B02001_002E", #Race
                                   "B02001_003E",
                                   "B02001_004E",
                                   "B02001_005E",
@@ -69,7 +69,7 @@ eMCensusVars <- c("B01003_001E",
                                   "B02001_008E",
                                   "B02001_009E",
                                   "B02001_010E",
-                                  "B25011_002E",
+                                  "B25011_002E", #Housing Tenure w/extras
                                   "B25011_003E",
                                   "B25011_004E",
                                   "B25011_005E",
@@ -273,6 +273,8 @@ lapply(yearsToRetreive, retrieveAndWriteAcs5YearData)
 retrieveAndWriteAcs5YearData(2009)
 # retrieves and writes to csv for the years in yearsToRetrieve
 lapply(yearsToRetrieve, retrieveAndWriteAcs5YearData)
+
+
 
 
 
