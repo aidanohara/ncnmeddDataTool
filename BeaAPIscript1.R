@@ -8,7 +8,7 @@ library(dplyr)
 library(bea.R)
 
 #BEA credentials
-beaKey 	<- 'YOUR 36-DIGIT API KEY'
+beaKey 	<- ''
 
 
 #List of BEA tables to focus
@@ -26,11 +26,27 @@ beaKey 	<- 'YOUR 36-DIGIT API KEY'
 #  'datasetname' = 'NIPA',
 #  'TableName' = 'T20305',
 #  'Frequency' = 'Q',
-#  'Year' = 'X',
+#  'Year' = '2011',
 #  'ResultFormat' = 'json'
 #);
 #beaPayload <- beaGet(beaSpecs);
 
+#ran aground because of 'linecode', pursued data with the API online.
+# no luck yet. 
+beaSpecs <- list(
+  'UserID' = beaKey,
+  'Method' = 'GetData',
+  'datasetname' = 'Regional', #Regional data has been split up by BEA
+  'TableName' = 'CA1',
+  'LineCode' = '2',
+  'Frequency' = 'Q',
+  'Year' = '2011',
+  'GeoFips' = '35049',
+  'ResultFormat' = 'json'
+);
+beaPayload <- beaGet(beaSpecs);
+  
+)
 
 #Df manipulation
 
