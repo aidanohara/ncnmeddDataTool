@@ -10,7 +10,7 @@ library(censusapi)
 #Census API setup
 # visit https://api.census.gov/data/key_signup.html
 # for your very own apikey!
-Sys.setenv(CENSUS_KEY='1970b8219ecf68bbae17336e39061ec7d2c21438')
+Sys.setenv(CENSUS_KEY='')
 readRenviron("~/.Renviron")
 Sys.getenv("CENSUS_KEY")
 
@@ -273,6 +273,13 @@ lapply(yearsToRetreive, retrieveAndWriteAcs5YearData)
 retrieveAndWriteAcs5YearData(2009)
 # retrieves and writes to csv for the years in yearsToRetrieve
 lapply(yearsToRetrieve, retrieveAndWriteAcs5YearData)
+
+# EXTENDING THE CENSUS RETRIEVAL for income etc. 
+
+ # new survey name
+ # new variables
+ # group B19301
+ # group C17002
 
 
 

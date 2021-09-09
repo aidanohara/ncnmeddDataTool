@@ -31,8 +31,10 @@ beaKey 	<- ''
 #);
 #beaPayload <- beaGet(beaSpecs);
 
-#ran aground because of 'linecode', pursued data with the API online.
-# no luck yet. 
+# BEA seems to be in the process of dismantling 'Regional' into 
+#  two subsets, the API hasn't recieved the update yet.  
+
+
 beaSpecs <- list(
   'UserID' = beaKey,
   'Method' = 'GetData',
