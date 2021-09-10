@@ -234,7 +234,7 @@ aCS5DataRetriever <- function(year) {
   rawData <- gtools::smartbind(rawTractData, rawCountyData, statPart, natPart,  fill = NA)
   
   # switch census variable names for their corresponding labels
-  labeledData <- renameVariables(rawData, year, term)
+  labeledData <- renameVariables(rawData, year,                                                                                                                                                                                  )
   
   return(labeledData)
 }
@@ -280,8 +280,106 @@ lapply(yearsToRetrieve, retrieveAndWriteAcs5YearData)
  # new variables
  # group B19301
  # group C17002
+ # group B19037
 
 
+getGroupVariableNames <- function(groupName) {
+  listCensusMetadata(
+    name = yATKey,
+    type = "variables",
+    group = groupName)
+}
+
+parseGroupVariables <- function(groupVariables) {
+  refList <- bind_rows(lapply(groupVariables, getGroupVariableNames))
+  refListLess <- (refList[,c("name","label")])
+  refListNoAnno <- refListLess[!grepl("A$", refListLess$name),]
+  return(refListNoAnno)
+}
+ 
+subGroupVarLabels <- function(rawData, namesAndLabels) {
+  matchVars <- namesAndLabels[namesAndLabels$name %in% names(rawData),]
+  names(rawData)[match(matchVars[,"name"],names(rawData))] = matchVars[,"label"]
+  return (rawData)
+} 
+
+
+#functions to retrieve data from the census 
+#   given a variable, variables, or variable group name
+
+# countyGeoTag <- "049"
+# includedVariables <- "B01003
+# "state:35" #NEW MEXICO
+
+getCountyData2 <- function(countyGeoTag) {
+  getCensus(
+    name = yATKey,
+    vars = c("NAME", singleVariables$name),
+    region = paste("county:", countyGeoTag),
+    regionin = stateCode
+  )
+}
+
+getNMStateData2 <- function() {
+  getCensus(
+    name = yATKey,
+    vars = c("NAME", singleVariables$name),
+    region = stateCode
+  )
+}
+
+getNationData2 <- function() {
+  getCensus(
+    name = yATKey,
+    vars = c("NAME", singleVariables$name),
+    region = "us:*"
+  )
+}
+
+# Tract Retrieval #
+
+#acs_income_group <- getCensus(
+#  name = "acs/acs5", 
+#  vintage = 2017, 
+#  vars = c("NAME", "group(B19013)"), 
+#  region = "tract:*", 
+#  regionin = "state:02")
+
+getCountyTractData2 <- function(countyGeoTag) {
+  getCensus(
+    name = yATKey,
+    vars = c("NAME", singleVariables$name),
+    region = "tract:*",
+    regionin = paste(stateCode,"+county:",countyGeoTag)
+  )
+}
+
+
+
+
+dataRetriever <- function(year, term, stateCode, countyGeos, groupVariables) {
+  yATKey <<- acsYearAndTermKey(year, term)
+  stateCode <<- stateCode
+  singleVariables <<- parseGroupVariables(groupVariables)
+  
+  tractParts <- lapply(countyGeos, getCountyTractData2)
+  #get the data for each geo level, county, state, nation
+  countyParts <- lapply(countyGeos, getCountyData2)
+  
+  natPart <- getNationData2()
+  statPart <- getNMStateData2()
+  
+  # concatenate the different dfs into one
+  rawTractData <- bind_rows(tractParts)
+  rawCountyData <- bind_rows(countyParts)
+  rawData <- gtools::smartbind(rawTractData, rawCountyData, 
+                               statPart, natPart,  fill = NA)
+  
+  # switch census variable names for their corresponding labels
+  labeledData <- subGroupVarLabels(rawData, singleVariables)
+  return(labeledData)
+  
+}
 
 
 
@@ -296,13 +394,13 @@ lapply(yearsToRetrieve, retrieveAndWriteAcs5YearData)
 #  type = "geography")
 #View(geos)
 
-#vars <- listCensusMetadata(
-#  name = surveyACS52019,
-#  type = "variables")
-#View(vars)
+vars <- listCensusMetadata(
+  name = surveyACS52019,
+  type = "variables")
+View(vars)
 
-#variableNames <- listCensusMetadata("acs/acs5", vintage = 2019, 
-#                                    type = "variables", group = NULL)
+variableNames <- listCensusMetadata("acs/acs5", vintage = 2019, 
+                                    type = "variables", group = NULL)
 
 
 
