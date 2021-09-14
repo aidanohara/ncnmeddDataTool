@@ -63,7 +63,7 @@ groupsForVariables <- c("B01003",
  # new survey name
  # new variables
  # group B19301
- # group C17002
+ # group C17002  WILL BE VERY AWK FOR TNUM
  # group B19037
  # group B19326
 
@@ -132,7 +132,7 @@ getNationData2 <- function() {
 }
 
 
-acsDataRetriever <- function(year, term, stateCode, countyGeos, groupVariables) {
+acsDataRetriever <- function(year, term, stateCode, countyGeos, groupVariables){
   yATKey <<- acsYearAndTermKey(year, term)
   stateCode <<- stateCode
   singleVariables <<- parseGroupVariables(groupVariables)
@@ -152,16 +152,28 @@ acsDataRetriever <- function(year, term, stateCode, countyGeos, groupVariables) 
   
   # switch census variable names for their corresponding labels
   labeledData <- subGroupVarLabels(rawData, singleVariables)
+  
+  # add a string key indicating variable codes, and yATKey
+  keyTag <- paste(yatTest, "Variable Codes: ", 
+        (paste(unlist(groupVariables), collapse = ", ")),
+        "(us)", sep = " ")
+  
+  colnames(labeledData)[length(colnames(labeledData))] <- keyTag
+  
   return(labeledData)
   
 }
 
 # example use of acsDataRetriever
 #Retrieves census tract, county, state, and national data for NCNM
-acs5Data2019 <- acsDataRetriever(2019, 5, "state:35", 
-                                 acsCountyFips, groupsForVariables)
+#acs5Data2019 <- acsDataRetriever(2019, 5, "state:35", 
+#                                 acsCountyFips, groupsForVariables)
 
 
+
+
+
+##### OLD CODE #####
 # #Use this function to rapidly retrieve the ACS data for a given year
 # retrieveAndWriteAcs5YearData <- function(year) {
 #   df <- aCS5DataRetriever(year)
@@ -181,6 +193,7 @@ yearsToRetrieve <- c(2010,
                      2017,
                      2018,
                      2019)
+
 
 ### HELPFUL FORMAT FOR COLLECTING YEARS OF DATA ###
 
