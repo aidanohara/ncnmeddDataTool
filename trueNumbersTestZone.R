@@ -2,6 +2,7 @@
 # HEADER HERE
 
 library(tnum)
+library(stringr)
 
 source("CensusAPIscript1.R")
 
@@ -56,26 +57,11 @@ santaFeTnum <- tnum.makeObject(
   tags = c("2019/acs/acs5", "group_B02001")
 )
 
-subject = paste("new_mexico",
-                paste("county", "santa_fe", sep = ":"),
-                paste("tract", "000200", sep = ":"), sep = "/")
-#"new_mexico/county:santa_fe/tract:000200"
-
-subject2 = slashSep(c("new_mexico",
-                     colonSep(c("county","santa_fe")),
-                     colonSep(c("tract", "000200"))))
-
-property = paste(paste("some_other_race", "two_plus_races", sep = ":"),
-                 paste("population", "estimated", sep = ":"),
-                 sep = "/")
-
-property2 = slashSep(c(colonSep(c("some_other_race", "two_plus_races")),
-                       colonSep(c("population", "estimated"))))
 
 value = 17
 
 tags = c(yATKey, groupVariablesInAList) #also see far right column first row
-          
+
 colonSep <- function(stringsToCombine) {
   paste(stringsToCombine, collapse = ":")
 }
@@ -83,6 +69,22 @@ colonSep <- function(stringsToCombine) {
 slashSep <- function(stringsToCombine) {
   paste(stringsToCombine, collapse = "/")
 }
+
+# subject = paste("new_mexico",
+#                 paste("county", "santa_fe", sep = ":"),
+#                 paste("tract", "000200", sep = ":"), sep = "/")
+# #"new_mexico/county:santa_fe/tract:000200"
+
+subject2 = slashSep(c("new_mexico",
+                     colonSep(c("county","santa_fe")),
+                     colonSep(c("tract", "000200"))))
+
+# property = paste(paste("some_other_race", "two_plus_races", sep = ":"),
+#                  paste("population", "estimated", sep = ":"),
+#                  sep = "/")
+
+property2 = slashSep(c(colonSep(c("some_other_race", "two_plus_races")),
+                       colonSep(c("population", "estimated"))))
 
 #Next up, we try to make a function that will read a column of values and make
 # true numbers for each value, In other words with a set property, 
@@ -93,7 +95,7 @@ slashSep <- function(stringsToCombine) {
 
 # Going for Column 7 of the testSFGroupB02001 set
 #Set the property:
-theProperty = slashSep(c(colonSep(c("some_other_race", "two_plus_races")),
+theProperty = slashSep(c(colonSep(c("some_other_race", "and", "two_plus_races")),
                        colonSep(c("population", "estimated"))))
 
 #Read in the (NAME, NUMBER) tuple from the data set
@@ -104,6 +106,7 @@ theReference = testSFGroupB02001[, c(1:4,7)]
 
 theValues = testSFGroupB02001[,7]
 
+#setTheSubjectValue(testSFGroupB02001[2,])
 setTheSubjectValue <- function(valueNameReference) {
   countyTitle <- generateCountyString(valueNameReference['NAME'])
   if (is.na(valueNameReference['tract'])) {
@@ -136,17 +139,17 @@ setTheSubjectValue <- function(valueNameReference) {
   #   return "new_mexico"
   # }
   # 
-subject = slashSep(c(valueNameReference[],
-                        colonSep(c("county","santa_fe")),
-                        colonSep(c("tract", "000200"))))
+# subject = slashSep(c(valueNameReference[],
+#                         colonSep(c("county","santa_fe")),
+#                         colonSep(c("tract", "000200"))))
 
 #use apply
-
-str_split(testSFGroupB02001[4,4], ", ")
-
-
-nameList <- unlist(str_split(valueNameReference['NAME'], ", "))
-countyName <- nameList[grepl("County", nameList)]
+# 
+# str_split(testSFGroupB02001[4,4], ", ")
+# 
+# 
+# nameList <- unlist(str_split(valueNameReference['NAME'], ", "))
+# countyName <- nameList[grepl("County", nameList)]
 
 generateCountyString <- function(nameString) {
    parts <- unlist(str_split(nameString, ", "))
@@ -162,9 +165,9 @@ generateCountyString <- function(nameString) {
 
 oneTrueNumberPlease <- function(subjectValue, property){
   aTNum <- tnum.makeObject(
-    subject = subjectValue[1],
+    subject = unlist(subjectValue[1]),
     property = property,
-    value = subjectValue[2],
+    value = unname(unlist(subjectValue[2])),
     tags = c("2019/acs/acs5", "group_B02001") # will generalize later
   )
   return(aTNum)
