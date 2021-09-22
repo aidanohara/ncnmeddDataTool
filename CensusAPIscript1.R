@@ -51,6 +51,7 @@ acsCountyFips <- c("049","028","039","047","043","033","055","007")
 
 # variables or groups, following is an earmarked list of groups
 
+#Original list of group Variables for data retrieval
 groupsForVariables <- c("B01003",
                         "B02001",
                         "B25011",
@@ -154,7 +155,7 @@ acsDataRetriever <- function(year, term, stateCode, countyGeos, groupVariables){
   labeledData <- subGroupVarLabels(rawData, singleVariables)
   
   # add a string key indicating variable codes, and yATKey
-  keyTag <- paste(yatTest, "Variable Codes: ", 
+  keyTag <- paste(yATKey, "Variable Codes: ", 
         (paste(unlist(groupVariables), collapse = ", ")),
         "(us)", sep = " ")
   
