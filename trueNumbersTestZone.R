@@ -140,11 +140,6 @@ setTheSubjectValue <- function(valueNameReference) {
 }
 
 
-userSetProperty <- function(columnName) {
-  my.property <- readline(prompt = paste("variable label: ", columnName, "/// property clause: "))
-  return(my.property)
-}
-
 
 # apply(testSFGroupB02001, MARGIN = 1, setTheSubject)
 #this call makes a big old list of subject values for TrueNumbers
@@ -186,7 +181,7 @@ generateCountyString <- function(nameString) {
 }
 
 
-# This oddly simple function always underwhelms and suprises me.  This process,
+# This oddly simple function always underwhelms and surprises me.  This process,
 #   is gonna get a lot more hectic before we make it out of the woods. 
 oneTrueNumberPlease <- function(subjectValue, property){
   aTNum <- tnum.makeObject(
@@ -197,6 +192,91 @@ oneTrueNumberPlease <- function(subjectValue, property){
   )
   return(aTNum)
 }
+
+makeTrueNumber <- function(aDataFrameRow, propertyClause, estimateColumnIndex,
+                           mOEColumnIndex, listOfTags) {
+  #generate a tnum ok county string
+  countyTitle <- generateCountyString(aDataFrameRow['NAME'])
+  #figure out what geo we're in, build a subject accordingly
+  if (is.na(aDataFrameRow['state'])) {
+    subjecter <- ("united_states")
+  } else if (is.na(aDataFrameRow['county'])) {
+    subjecter <- ("new_mexico")
+  } else if (is.na(aDataFrameRow['tract'])) {
+    subjecter <- (slashSep(c("new_mexico",
+                             colonSep(c("county", countyTitle)))))
+  } else {
+    subjecter <- (slashSep(c("new_mexico",
+                             colonSep(c("county", countyTitle)),
+                             colonSep(c("tract", aDataFrameRow['tract'])))))
+  }
+  #BAD IF TREE< AT LEAST BEST I COULD TELL
+  # if (is.na(aDataFrameRow['tract'])) {
+  #   if (is.na(aDataFrameRow['county'])) {
+  #     if (is.na(aDataFrameRow['state'])) {
+  #       subjecter <- ("united_states")
+  #     }
+  #     subjecter <- ("new_mexico")
+  #   }
+  #   subjecter <- (slashSep(c("new_mexico",
+  #                          colonSep(c("county", countyTitle)))))
+  # } else {
+  #   subjecter <- (slashSep(c("new_mexico",
+  #                            colonSep(c("county", countyTitle)),
+  #                            colonSep(c("tract", aDataFrameRow['tract'])))))
+  # }
+  #set the value
+  valueNumber <- aDataFrameRow[estimateColumnIndex]
+  #finish building tags
+  mOETag <- paste("margin_of_error:",aDataFrameRow[mOEColumnIndex], sep = "")
+  listOfTags <- c(listOfTags, mOETag)
+  print(subjecter)
+  #print(property)
+  print(valueNumber)
+  #print(listOfTags)
+  aNum <- tnum.makeObject(
+    subject = subjecter,
+    property = propertyClause,
+    value = valueNumber,
+    tags = listOfTags
+  )
+  #print(aNum)
+  return(aDataFrameRow)
+}
+
+#Fold the margin of error data into each true numbers about the data point in Q
+
+userSetProperty <- function(columnNames) {
+  print(columnNames)
+  print("example: race:some_other:two_plus_races/population:estimated")
+  my.property <- readline(prompt = paste("property clause: "))
+  return(my.property)
+}
+
+extractTaggage <- function(columnStringWithTags) {
+  bits <- str_split(columnStringWithTags, ";")
+  lessBits <- tail(unlist(bits), n = -1)
+  return(lessBits)
+}
+
+
+makePartialsDFs <- function(acsData) {}
+
+makeTNumsFromPartialDF <- function(singleVariableDataFrame) {
+  propertyClause <- userSetProperty(colnames(singleVariableDataFrame))
+  listOfTags <- extractTaggage(tail(names(singleVariableDataFrame), n = 1))
+  estimateColumnIndex <- grep("Estimate", colnames(singleVariableDataFrame))
+  mOEColumnIndex <- grep("Margin", colnames(singleVariableDataFrame))
+  
+  #here the function is gonna deep dive in some kind of "apply"
+  theNUMS <- lapply(singleVariableDataFrame, makeTrueNumber, 
+        propertyClause, estimateColumnIndex, mOEColumnIndex, listOfTags)
+  return(theNUMS)
+}
+
+
+
+
 
 columnToTrueNumbers <- function(dataSet, columnIndexToIngest) {
   #Property, consistent throughout column

@@ -10,7 +10,7 @@ library(censusapi)
 #Census API setup
 # visit https://api.census.gov/data/key_signup.html
 # for your very own apikey!
-Sys.setenv(CENSUS_KEY='')
+Sys.setenv(CENSUS_KEY='1970b8219ecf68bbae17336e39061ec7d2c21438')
 readRenviron("~/.Renviron")
 Sys.getenv("CENSUS_KEY")
 
@@ -154,12 +154,23 @@ acsDataRetriever <- function(year, term, stateCode, countyGeos, groupVariables){
   # switch census variable names for their corresponding labels
   labeledData <- subGroupVarLabels(rawData, singleVariables)
   
-  # add a string key indicating variable codes, and yATKey
-  keyTag <- paste(yATKey, "Variable Codes: ", 
-        (paste(unlist(groupVariables), collapse = ", ")),
-        "(us)", sep = " ")
+  # # add a string key indicating variable codes, and yATKey
+  tagTag <- paste(tail(names(labeledData), n=1), 
+                  paste("year:", year, sep = ""),
+                  paste("survey:", yATKey, sep = ""), 
+                  paste("group:", (paste(unlist(groupVariables), 
+                                         collapse = ", ")), sep = ""), 
+                  sep = ";")
   
-  colnames(labeledData)[length(colnames(labeledData))] <- keyTag
+  colnames(labeledData)[length(colnames(labeledData))] <- tagTag
+  
+  # keyTag <- paste(yATKey, "Variable Codes:", 
+  #       (paste(unlist(groupVariables), collapse = ", ")),
+  #       "(us)", sep = " ")
+  # 
+  # colnames(labeledData)[length(colnames(labeledData))] <- keyTag
+  # 
+  
   
   return(labeledData)
   
