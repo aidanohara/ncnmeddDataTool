@@ -55,6 +55,8 @@ uniqueDescriptors <- function(dataSet) {
 testSFGroupB02001 <- acsDataRetriever(2019, 5, "state:35",
                                       "049", "B02001")
 
+doubleTest <- testSFGroupB02001[c(1:5,7,
+                                  (grep("us;",colnames(testSFGroupB02001))))]
 # format for column 7 in the df.
 # santaFeTnum <- tnum.makeObject(
 #   subject = "new_mexico/county:santa_fe/tract:000200",
@@ -86,17 +88,17 @@ slashSep <- function(stringsToCombine) {
 # #"new_mexico/county:santa_fe/tract:000200"
 
 # Builds a single tnum subject, using the colon and slash functions
-subject2 = slashSep(c("new_mexico",
-                     colonSep(c("county","santa_fe")),
-                     colonSep(c("tract", "000200"))))
+# subject2 = slashSep(c("new_mexico",
+#                      colonSep(c("county","santa_fe")),
+#                      colonSep(c("tract", "000200"))))
 
 # property = paste(paste("some_other_race", "two_plus_races", sep = ":"),
 #                  paste("population", "estimated", sep = ":"),
 #                  sep = "/")
 
 # Builds a single tnum property, using the colon and slash functions
-property2 = slashSep(c(colonSep(c("some_other_race", "two_plus_races")),
-                       colonSep(c("population", "estimated"))))
+# property2 = slashSep(c(colonSep(c("some_other_race", "two_plus_races")),
+#                        colonSep(c("population", "estimated"))))
 
 #Next up, we try to make a function that will read a column of values and make
 # true numbers for each value, In other words with a set property, 
@@ -107,8 +109,8 @@ property2 = slashSep(c(colonSep(c("some_other_race", "two_plus_races")),
 
 # Going for Column 7 of the testSFGroupB02001 set
 #Set the property:
-theProperty = slashSep(c(colonSep(c("some_other_race", "and", "two_plus_races")),
-                       colonSep(c("population", "estimated"))))
+# theProperty = slashSep(c(colonSep(c("some_other_race", "and", "two_plus_races")),
+#                        colonSep(c("population", "estimated"))))
 
 # Best I can tell, these are just some example assignments for function building
 # #Read in the (NAME, NUMBER) tuple from the data set
@@ -226,24 +228,30 @@ makeTrueNumber <- function(aDataFrameRow, propertyClause, estimateColumnIndex,
   #                            colonSep(c("tract", aDataFrameRow['tract'])))))
   # }
   #set the value
-  valueNumber <- aDataFrameRow[estimateColumnIndex]
+  valueNumber <- as.integer(aDataFrameRow[estimateColumnIndex])
   #finish building tags
-  mOETag <- paste("margin_of_error:",aDataFrameRow[mOEColumnIndex], sep = "")
-  listOfTags <- c(listOfTags, mOETag)
-  print(subjecter)
+  #print(subjecter)
   #print(property)
-  print(valueNumber)
+  #print(valueNumber)
   #print(listOfTags)
   aNum <- tnum.makeObject(
     subject = subjecter,
+    error = as.integer(aDataFrameRow[mOEColumnIndex]),
     property = propertyClause,
     value = valueNumber,
     tags = listOfTags
   )
   #print(aNum)
-  return(aDataFrameRow)
+  return(aNum)
 }
 
+testTnum <- tnum.makeObject(
+  subject = "United_states",
+  property = "lol",
+  value = 17,
+  tags = c("eeek","aaack"),
+  error = 5
+)
 #Fold the margin of error data into each true numbers about the data point in Q
 
 userSetProperty <- function(columnNames) {
@@ -269,8 +277,9 @@ makeTNumsFromPartialDF <- function(singleVariableDataFrame) {
   mOEColumnIndex <- grep("Margin", colnames(singleVariableDataFrame))
   
   #here the function is gonna deep dive in some kind of "apply"
-  theNUMS <- lapply(singleVariableDataFrame, makeTrueNumber, 
-        propertyClause, estimateColumnIndex, mOEColumnIndex, listOfTags)
+  theNUMS <- apply(singleVariableDataFrame,MARGIN = 1, makeTrueNumber, 
+                    propertyClause, estimateColumnIndex, 
+                    mOEColumnIndex, listOfTags, simplify = FALSE)
   return(theNUMS)
 }
 

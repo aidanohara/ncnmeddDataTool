@@ -9,10 +9,10 @@ library(censusapi)
 
 #Census API setup
 # visit https://api.census.gov/data/key_signup.html
-# for your very own apikey!
-Sys.setenv(CENSUS_KEY='1970b8219ecf68bbae17336e39061ec7d2c21438')
-readRenviron("~/.Renviron")
-Sys.getenv("CENSUS_KEY")
+# # for your very own apikey!
+# Sys.setenv(CENSUS_KEY='')
+# readRenviron("~/.Renviron")
+# Sys.getenv("CENSUS_KEY")
 
 
 ### ACS data retrieval ###
