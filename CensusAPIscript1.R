@@ -46,13 +46,10 @@ acsYearAndTermKey <- function(year, term) {
 
 acsCountyFips <- c("049","028","039","047","043","033","055","007")
 
-# variables
-# variable names
-
 # variables or groups, following is an earmarked list of groups
 
 #Original list of group Variables for data retrieval
-groupsForVariables <- c("B01003",
+groupsForVariables <- c("B01003", #note out what these are
                         "B02001",
                         "B25011",
                         "B25001",
@@ -68,13 +65,15 @@ groupsForVariables <- c("B01003",
  # group B19037
  # group B19326
 
-
+# getGroupVariableNames("B19301")
+# Returns the formal labels of each specific variable in the group
 getGroupVariableNames <- function(groupName) {
   listCensusMetadata(
     name = yATKey,
     type = "variables",
     group = groupName)
 }
+
 
 parseGroupVariables <- function(groupVariables) {
   refList <- bind_rows(lapply(groupVariables, getGroupVariableNames))
