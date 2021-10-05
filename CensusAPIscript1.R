@@ -85,7 +85,8 @@ parseGroupVariables <- function(groupVariables) {
  
 subGroupVarLabels <- function(rawData, namesAndLabels) {
   matchVars <- namesAndLabels[namesAndLabels$name %in% names(rawData),]
-  names(rawData)[match(matchVars[,"name"],names(rawData))] = matchVars[,"label"]
+  names(rawData)[match(matchVars[,"name"],names(rawData))] = paste(
+    matchVars[,"label"],matchVars[,"name"], sep = "/")
   return (rawData)
 } 
 

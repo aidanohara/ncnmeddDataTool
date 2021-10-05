@@ -44,9 +44,20 @@ source("CensusAPIscript1.R")
 #   ACS/ Census variable format style: "!!" splits.
 uniqueDescriptors <- function(dataSet) {
   names <- colnames(dataSet, do.NULL = TRUE) %>%
+    lapply(str_split, "/", n = Inf, simplify = FALSE) %>%
     lapply(str_split, "!!", n = Inf, simplify = FALSE) %>%
     unlist(recursive = TRUE) %>%
     unique(incomprables = FALSE)
+  return(names)
+}
+
+uniqueDescriptors2 <- function(dataSet) {
+  names <- colnames(dataSet, do.NULL = TRUE) %>%
+    lapply(str_split, "/") %>%
+    lapply(unlist)[1] %>%
+    lapply(str_split, "!!", n = Inf, simplify = FALSE) %>%
+    unlist(recursive = TRUE) %>%
+    unique(incomparables = FALSE)
   return(names)
 }
 
@@ -267,12 +278,66 @@ extractTaggage <- function(columnStringWithTags) {
   return(lessBits)
 }
 
+findMatchingVariablePairs <- function(variableNameList) {
+  refList <- lapply(variableNameList, str_split, "/")
+  getJustVarCode <- function(listOfNameStrings) {
+    return(unlist(listOfNameStrings)[2])
+  }
+  justVarCodes <- lapply(refTest, getJustVarCode)
+  pairsOfVars <- lapply(justVarCodes, )
+}
 
-makePartialsDFs <- function(acsData) {}
+makeListOfPresentVariableCodes <- function(variableNamesList) {
+  refList <- lapply(variableNamesList, str_split, "/")
+  getJustVarCode <- function(listOfNameStrings) {
+    return(unlist(listOfNameStrings)[2])
+  }
+  justVarCodes <- lapply(refList, getJustVarCode)
+  stripEm <- str_sub(unlist(justVarCodes), 1, nchar(justVarCodes)-1) 
+  return(unique(stripEm))
+}
+
+makePartialsDFs <- function(acsData) {
+  #Make A list of the names columns that will be in every DF
+  # state, county, tract, NAME, us;..., 
+  consistentColumnNames <- c(colnames(acsData[grep("us;", colnames(acsData))]),
+                             "state","county","tract","NAME")
+  #   Turn the list of remaining variable columns, into a list of pairs of 
+  # variable column names
+  variableNameList <- unique(colnames(acsData)[! colnames(acsData) %in%
+                                                 consistentColumnNames])
+  codes <- makeListOfPresentVariableCodes(variableNameList)
+
+  # For each pair of Variable/MOE in the above list, create a new partial DF,
+  # containing the pertinent columns, add it too a list.
+  # For each code, build a partial DF, with consistentColumns, and matching
+    # column names, use grep or so to make the selection.
+  
+  
+  
+# doubleTest <- testSFGroupB02001[c(1:5,7,
+#                                   (grep("us;",colnames(testSFGroupB02001))))]
+  selectPartialDF <- function(singleCodeString) {
+    codeColumns <- colnames(acsData)[grep(singleCodeString, 
+                                                    colnames(acsData))]
+    singlePartialDF <- acsData[,c(consistentColumnNames, 
+                                 codeColumns)]
+    return(singlePartialDF)
+  }
+  
+  
+  listOfPartialDFs <- lapply(codes, selectPartialDF)
+  #return aListOfPartialDF
+  return(listOfPartialDFs)
+}
 
 makeTNumsFromPartialDF <- function(singleVariableDataFrame) {
   propertyClause <- userSetProperty(colnames(singleVariableDataFrame))
-  listOfTags <- extractTaggage(tail(names(singleVariableDataFrame), n = 1))
+  listOfTags <- extractTaggage(colnames(singleVariableDataFrame)[
+    grep("us;", colnames(singleVariableDataFrame))])
+    
+  #  singleVariableDataFrame[, grep("us;", colnames(singleVariableDataFrame))])
+                                                            
   estimateColumnIndex <- grep("Estimate", colnames(singleVariableDataFrame))
   mOEColumnIndex <- grep("Margin", colnames(singleVariableDataFrame))
   
@@ -283,9 +348,16 @@ makeTNumsFromPartialDF <- function(singleVariableDataFrame) {
   return(theNUMS)
 }
 
+testAllGeosPop2019 <- acsDataRetriever(2019, 5, "state:35",
+                                       acsCountyFips, "B01003")
+testALLNums <- lapply(makePartialsDFs(testAllGeosPop2019),
+                      makeTNumsFromPartialDF)
+testALLNums[[1]][99]
 
+financeData <- acsDataRetriever(2019, 5, "state:35",
+                                acsCountyFips, "B19037")
 
-
+uniqueDescriptors(financeData)
 
 columnToTrueNumbers <- function(dataSet, columnIndexToIngest) {
   #Property, consistent throughout column
