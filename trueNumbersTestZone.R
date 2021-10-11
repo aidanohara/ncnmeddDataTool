@@ -85,7 +85,7 @@ generateCountyString <- function(nameString) {
 
 # MAKE A TRUE NUMBER  #
 makeTrueNumber <- function(aDataFrameRow, propertyClause, estimateColumnIndex,
-                           mOEColumnIndex, listOfTags) {
+                           mOEColumnIndex, listOfTags, unitLabel) {
   # generate a TNUM-county-string
   countyTitle <- generateCountyString(aDataFrameRow['NAME'])
   # test column entries for most specific geography NAME available.
@@ -116,7 +116,8 @@ makeTrueNumber <- function(aDataFrameRow, propertyClause, estimateColumnIndex,
     subject = subjecter,
     error = as.integer(aDataFrameRow[mOEColumnIndex]),
     property = propertyClause,
-    value = valueNumber,
+    valueNumber,
+    unit = unitLabel,
     tags = listOfTags
   )
   # print test to be sure aNum has the right structure
@@ -209,80 +210,343 @@ makePartialsDFs <- function(acsData) {
 makeTNumsFromPartialDF <- function(singleVariableDataFrame) {
   # First things first, user needs to set the property, call userSetProperty
   #    Least operable part of the code so far, very inefficient
-  propertyClause <- userSetProperty(colnames(singleVariableDataFrame))
+  #propertyClause <- userSetProperty(colnames(singleVariableDataFrame))
+  estimateColumnLabel <- colnames(
+    singleVariableDataFrame[grep("Estimate",
+                                 colnames(singleVariableDataFrame))])
+  propertyClauseRow <- getPropertyFromCode(estimateColumnLabel, 
+                                        columnPropertyKeyWithTags)
+  
   # Next, set the tags, using extractTaggage, grep the "us;" column for the 
   #   functions input
   listOfTags <- extractTaggage(colnames(singleVariableDataFrame)[
     grep("us;", colnames(singleVariableDataFrame))])
+  
+  if (!is.na(propertyClauseRow$columnTags)) {
+    listOfTags <- c(listOfTags, propertyClauseRow$columnTags)
+  }
+  unitLabel <- NA
+  if (!is.na(propertyClauseRow$unitTags)) {
+    unitLabel <- propertyClauseRow$unitTags
+    print(unitLabel)
+  }
+  
   # retrieve and store an index for the est. and m.o.e. columns.
   estimateColumnIndex <- grep("Estimate", colnames(singleVariableDataFrame))
   mOEColumnIndex <- grep("Margin", colnames(singleVariableDataFrame))
+  
+  # propertyClause <- extractProperty(colnames(singleVariableDataFrame)
+  #                                   [estimateColumnIndex],listOfTags)
+  
   # Build theNUMS, these columns very own list of true numbers
   #    Calling upon makeTrueNumber from earlier with each row of the partial DF
   # One True Number per row, all in a big list. 
   theNUMS <- apply(singleVariableDataFrame,MARGIN = 1, makeTrueNumber, 
-                    propertyClause, estimateColumnIndex, 
-                    mOEColumnIndex, listOfTags, simplify = FALSE)
+                    propertyClauseRow$columnNamesKeyCodes, estimateColumnIndex, 
+                    mOEColumnIndex, listOfTags, unitLabel, simplify = FALSE)
   return(theNUMS)
 }
+
+# extractProperty <- function(estimateColumnName, tags) {
+#   specifier <- #strip the column name "race"
+# }
+
+# columnPaintThinner <- function(columnString) {
+#   parts <- strsplit(columnString, '[!/]')
+#   parts <- parts[grep(" ", parts)]
+#   return(parts)
+# }
 
 # TESTING ZONE #
 # Make some new data frames, turn them into true numbers, rejoice.
 testAllGeosPop2019 <- acsDataRetriever(2019, 5, "state:35",
                                        acsCountyFips, "B01003")
+
 testALLNums <- lapply(makePartialsDFs(testAllGeosPop2019),
                       makeTNumsFromPartialDF)
-testALLNums[[1]][99]
+testALLNums[[1]][99] 
+# error "-555555555" ->
+# A '*****' entry in the margin of error column indicates that the estimate is 
+# controlled. A statistical test for sampling variability is not appropriate.
+# https://www.census.gov/data/developers/data-sets/acs-1year/notes-on-acs-(...)
+#   (...)estimate-and-annotation-values.html
+totalPopulationAlone2019 <- acsDataRetriever(2019, 5, "state:35",
+                                             acsCountyFips, "B01003")
+totalPopulationAlone2019TNums <- lapply(
+  makePartialsDFs(totalPopulationAlone2019),
+  makeTNumsFromPartialDF)
+
+perCapitaIncome2019 <- acsDataRetriever(2019, 5, "state:35",
+                                        acsCountyFips, "B19301")
+# not income:per_capita/dollars:estimated
+#  actually income:per_capita:estimated
+perCapitaIncome2019TNums <- lapply(makePartialsDFs(perCapitaIncome2019),
+                                   makeTNumsFromPartialDF)
+perCapitaIncome2019TNums[[1]][118]
+perCapitaIncome2019TNums[[1]][117]
+
+
+povertyStatusByAge2019 <- acsDataRetriever(2019, 5, "state:35",
+                                           acsCountyFips, "B17020")
+povertyStatusByAge2019TNums <- lapply(makePartialsDFs(povertyStatusByAge2019),
+                                      makeTNumsFromPartialDF)
+
+populationByRace2019 <- acsDataRetriever(2019, 5, "state:35",
+                                         acsCountyFips, "B02001")
+populationByRace2019TNums <- lapply(makePartialsDFs(populationByRace2019),
+                                    makeTNumsFromPartialDF)
+
+citizenshipStatus2019 <- acsDataRetriever(2019, 5, "state:35",
+                                          acsCountyFips, "B05001")
+citizenshipStatus2019TNums <- lapply(makePartialsDFs(citizenshipStatus2019),
+                                     makeTNumsFromPartialDF)
 
 financeData <- acsDataRetriever(2019, 5, "state:35",
                                 acsCountyFips, "B19037")
 
-specifierSorter <- function(dataSet) {
-  
-  columnParser <- function(dataSetColumnName) {
-    #"Margin of Error!!Total!! XXX Some other race alone XXX /B02001_007M" 
-  }
+# Retrieve 5 Group Variables detailing demographics
+
+
+#B01003
+totalPopulationAlone2019 <- acsDataRetriever(2019, 5, "state:35",
+                                             acsCountyFips, "B01003")
+totalPopulationAlone2011 <- acsDataRetriever(2011, 5, "state:35",
+                                             acsCountyFips, "B01003")
+totalPopulationAlone2019TNums <- lapply(
+  makePartialsDFs(totalPopulationAlone2019),
+  makeTNumsFromPartialDF)
+#B02001
+populationByRace2019 <- acsDataRetriever(2019, 5, "state:35",
+                                         acsCountyFips, "B02001")
+populationByRace2011 <- acsDataRetriever(2011, 5, "state:35",
+                                         acsCountyFips, "B02001")
+populationByRace2019TNums <- lapply(makePartialsDFs(populationByRace2019),
+                                    makeTNumsFromPartialDF)
+#B19301
+perCapitaIncome2019 <- acsDataRetriever(2019, 5, "state:35",
+                                        acsCountyFips, "B19301")
+perCapitaIncome2011 <- acsDataRetriever(2011, 5, "state:35",
+                                        acsCountyFips, "B19301")
+# not income:per_capita/dollars:estimated
+#  actually income:per_capita:estimated
+perCapitaIncome2019TNums <- lapply(makePartialsDFs(perCapitaIncome2019),
+                                   makeTNumsFromPartialDF)
+#B17020
+povertyStatusByAge2019 <- acsDataRetriever(2019, 5, "state:35",
+                                           acsCountyFips, "B17020")
+povertyStatusByAge2013 <- acsDataRetriever(2013, 5, "state:35",
+                                           acsCountyFips, "B17020")
+povertyStatusByAge2019TNums <- lapply(makePartialsDFs(povertyStatusByAge2019),
+                                      makeTNumsFromPartialDF)
+#B23025
+employmentStatus2019 <- acsDataRetriever(2019, 5, "state:35",
+                                           acsCountyFips, "B23025")
+employmentStatus2011 <- acsDataRetriever(2011, 5, "state:35",
+                                         acsCountyFips, "B23025")
+employmentStatus2019TNums <- lapply(makePartialsDFs(povertyStatusByAge2019),
+                                      makeTNumsFromPartialDF)
+
+tNumsFromDataSet <- function(dataSet) {
+  return (lapply(makePartialsDFs(dataSet),(makeTNumsFromPartialDF)))
 }
-columnPaintThinner <- function(columnString) {
-  parts <- strsplit(columnString, '[!/]')
-  parts <- parts[grepl(" ", parts)]
-  return(parts)
+
+yearsForFirstDataSet <- c(2011,2013,2015,2017,2019)
+#total Population
+listOfTotalPopulationDF <- lapply(yearsForFirstDataSet, acsDataRetriever,
+                                  5, "state:35", acsCountyFips, "B01003")
+totalPopulationTnums <- lapply(listOfTotalPopulationDF, tNumsFromDataSet)
+allPopTnums <- c(totalPopulationTnums[[1]][[1]],
+                 totalPopulationTnums[[2]][[1]],
+                 totalPopulationTnums[[3]][[1]],
+                 totalPopulationTnums[[4]][[1]],
+                 totalPopulationTnums[[5]][[1]])
+
+#populationByRace
+listOfRacePopulationDF <- lapply(yearsForFirstDataSet, acsDataRetriever,
+                                  5, "state:35", acsCountyFips, "B02001")
+racePopulationTnums <- lapply(listOfTotalPopulationDF, tNumsFromDataSet)
+allRaceTnums <- c(racePopulationTnums[[1]][[1]],
+                 racePopulationTnums[[2]][[1]],
+                 racePopulationTnums[[3]][[1]],
+                 racePopulationTnums[[4]][[1]],
+                 racePopulationTnums[[5]][[1]])
+#perCapitaIncome
+listOfPerCapIncomeDF <- lapply(yearsForFirstDataSet, acsDataRetriever,
+                                  5, "state:35", acsCountyFips, "B19301")
+perCapIncomeTnums <- lapply(listOfTotalPopulationDF, tNumsFromDataSet)
+allPerCapTnums <- c(perCapIncomeTnums[[1]][[1]],
+                    perCapIncomeTnums[[2]][[1]],
+                    perCapIncomeTnums[[3]][[1]],
+                    perCapIncomeTnums[[4]][[1]],
+                    perCapIncomeTnums[[5]][[1]])
+
+#povertyStatusByAge
+listOfPovertyStatusDF <- lapply(c(2013,2015,2017,2019), acsDataRetriever,
+                                  5, "state:35", acsCountyFips, "B17020")
+povertyStatusTnums <- lapply(listOfTotalPopulationDF, tNumsFromDataSet)
+allPovTnums <- c(povertyStatusTnums[[1]][[1]],
+                 povertyStatusTnums[[2]][[1]],
+                 povertyStatusTnums[[3]][[1]],
+                 povertyStatusTnums[[4]][[1]])
+#employmentStatus
+listOfEmploymentStatusDF <- lapply(yearsForFirstDataSet, acsDataRetriever,
+                                  5, "state:35", acsCountyFips, "B23025")
+employmentStatusTnums <- lapply(listOfTotalPopulationDF, tNumsFromDataSet)
+allEmpTnums <- c(employmentStatusTnums[[1]][[1]],
+                    employmentStatusTnums[[2]][[1]],
+                    employmentStatusTnums[[3]][[1]],
+                    employmentStatusTnums[[4]][[1]],
+                    employmentStatusTnums[[5]][[1]])
+
+tnum.postObjects(allPopTnums)
+# Posting 25111 characters
+# Posting 25133 characters
+# Posting 25123 characters
+# Posting 23994 characters
+# posted 590 tnums
+tnum.postObjects(allRaceTnums)
+# Posting 25111 characters
+# Posting 25133 characters
+# Posting 25123 characters
+# Posting 23994 characters
+# posted 590 tnums
+tnum.postObjects(allPerCapTnums)
+# Posting 25111 characters
+# Posting 25133 characters
+# Posting 25123 characters
+# Posting 23994 characters
+# posted 590 tnums
+tnum.postObjects(allPovTnums)
+# Posting 25111 characters
+# Posting 25133 characters
+# Posting 25123 characters
+# Posting 4122 characters
+# posted 472 tnums
+tnum.postObjects(allEmpTnums)
+# Posting 25111 characters
+# Posting 25133 characters
+# Posting 25123 characters
+# Posting 23994 characters
+# posted 590 tnums
+testDF <- tnum.objectsToDf(allPopTnums)
+View(testDf)
+
+firstTrueNumbersACSDataSet <- tnum.objectsToDf((c(allPopTnums,
+                                                  allRaceTnums,
+                                                  allPovTnums,
+                                                  allPerCapTnums,
+                                                  allEmpTnums)))
+
+write.csv(firstTrueNumbersACSDataSet,
+        "C:\\RStudioProjects\\ncnmeddDataTool\\firstTrueNumbersACSDataSet.csv", 
+          row.names = FALSE)
+
+# The following are the framework for codifying the properties
+#   2011 column name, minding poverty status by age
+columnNamesFirst <- c(colnames(totalPopulationAlone2011),
+                      colnames(populationByRace2011),
+                      colnames(perCapitaIncome2011),
+                      colnames(povertyStatusByAge2013),
+                      colnames(employmentStatus2011))
+oldEstimateColumns <- columnNamesFirst[grep("Estimate",columnNamesFirst)]
+
+# 2019 column names
+columnNamesRecent <- c(colnames(totalPopulationAlone2019),
+                        colnames(populationByRace2019),
+                        colnames(perCapitaIncome2019),
+                        colnames(povertyStatusByAge2019),
+                        colnames(employmentStatus2019))
+
+recentEstimateColumns <- columnNamesRecent[grep("Estimate",columnNamesRecent)]
+ #raw data storage of column names
+columnNamesKey <- data.frame(oldEstimateColumns,recentEstimateColumns)
+
+codifyProperties <- function(columnNameKeyRow) {
+  print(columnNameKeyRow[c('oldEstimateColumns','recentEstimateColumns')])
+  my.property <- readline(prompt = paste("property clause: "))
+  return(my.property)
+}
+addAnyPropertyTags <- function(columnPropertyKeyRow) {
+  print(columnPropertyKeyRow[c('oldEstimateColumns','recentEstimateColumns',
+                           'columnNameKeyCodes')])
+  my.property <- readline(prompt = paste("extra tags: "))
+  return(my.property)
+}
+addUnits <- function(columnNameKeyRow) {
+  print(columnNameKeyRow[c('oldEstimateColumns','recentEstimateColumns')])
+  my.property <- readline(prompt = paste("specified units: "))
+  return(my.property)
 }
 
 
+columnNamesKeyCodes <- apply(columnNamesKey, MARGIN = 1, codifyProperties)
 
-#  FINDING UNIQUE DESCRIPTIONS  #
-# process for creating unique descriptors, present below in the function
-# names <- colnames(testSetColfax, do.NULL = TRUE)
-# str_split(names[89], "!!", n = Inf, simplify = FALSE)
-# words <- lapply(names, str_split, "!!", n = Inf, simplify = FALSE)
-# words2 <- unlist(words, recursive = TRUE)
-# words3 <- unique(words2, incomparables = FALSE)
+columnPropertyKey <- cbind(columnNamesKey,columnNamesKeyCodes)
 
-#makes you a list of "unique descriptors", specifically perataining to the
-#   ACS/ Census variable format style: "!!" splits.
-uniqueDescriptors <- function(dataSet) {
-  names <- colnames(dataSet, do.NULL = TRUE) %>%
-    lapply(str_split, "/", n = Inf, simplify = FALSE) %>%
-    lapply(str_split, "!!", n = Inf, simplify = FALSE) %>%
-    unlist(recursive = TRUE) %>%
-    unique(incomprables = FALSE)
-  return(names)
-}
-uniqueDescriptors2EclecticBoogaboo <- function(dataSet) {
-  names <- colnames(dataSet, do.NULL = TRUE) %>%
-    lapply(str_split, "/") %>%
-    lapply(unlist)[1] %>%
-    lapply(str_split, "!!", n = Inf, simplify = FALSE) %>%
-    unlist(recursive = TRUE) %>%
-    unique(incomparables = FALSE)
-  return(names)
-}
+columnTags <- apply(columnPropertyKey, MARGIN = 1, addAnyPropertyTags)
 
-# considerations for using uniqueDescriptors to better assign the True Numbers 
-#     properties, at least by providing more guidance to the user.  
-uniqueDescriptors(financeData)
+unitTags <- apply(columnNamesKey, MARGIN = 1, addUnits)
+columnPropertyKeyWithTags <- cbind(columnPropertyKey, columnTags, unitTags)
+columnPropertyKeyWithTags$columnTags[columnPropertyKeyWithTags$columnTags ==
+                                       ""] <- NA
+columnPropertyKeyWithTags$unitTags[columnPropertyKeyWithTags$unitTags ==
+                                       ""] <- NA
+columnPropertyKeyWithTags <<- columnPropertyKeyWithTags
 
+
+# 
+# getPropertyFromCode <- function(columnLabel, columnPropertyKeyWithTags) {
+#   #work the column label down to just the variable code
+#   columnVarCode <- tail(unlist(str_split(columnLabel, "/")),1)
+#   #Select the row that contains a match for columnLabel
+#   # return(unname(filter(columnPropertyKeyWithTags, 
+#   #               str_detect(oldEstimateColumns, "B02001_003E"))['columnNamesKeyCodes']))
+#   return(filter(columnPropertyKeyWithTags,
+#                 str_detect(oldEstimateColumns, columnVarCode)))
+# }
+# 
+# # specifierSorter <- function(dataSet) {
+# #   
+# #   columnParser <- function(dataSetColumnName) {
+# #     #"Margin of Error!!Total!! XXX Some other race alone XXX /B02001_007M" 
+# #   }
+# # }
+# 
+# 
+# 
+# #  FINDING UNIQUE DESCRIPTIONS  #
+# # process for creating unique descriptors, present below in the function
+# # names <- colnames(testSetColfax, do.NULL = TRUE)
+# # str_split(names[89], "!!", n = Inf, simplify = FALSE)
+# # words <- lapply(names, str_split, "!!", n = Inf, simplify = FALSE)
+# # words2 <- unlist(words, recursive = TRUE)
+# # words3 <- unique(words2, incomparables = FALSE)
+# 
+# #makes you a list of "unique descriptors", specifically perataining to the
+# #   ACS/ Census variable format style: "!!" splits.
+# uniqueDescriptors <- function(dataSet) {
+#   names <- colnames(dataSet, do.NULL = TRUE) %>%
+#     lapply(str_split, "/", n = Inf, simplify = FALSE) %>%
+#     lapply(str_split, "!!", n = Inf, simplify = FALSE) %>%
+#     unlist(recursive = TRUE) %>%
+#     unique(incomprables = FALSE)
+#   return(names)
+# }
+# uniqueDescriptors2EclecticBoogaboo <- function(dataSet) {
+#   names <- colnames(dataSet, do.NULL = TRUE) %>%
+#     lapply(str_split, "/") %>%
+#     lapply(unlist) %>%
+#     lapply(head, 1) %>%
+#     lapply(str_split, "!!", n = Inf, simplify = FALSE) %>%
+#     unlist(recursive = TRUE) %>%
+#     unique(incomparables = FALSE)
+#   return(names)
+# }
+# 
+# # considerations for using uniqueDescriptors to better assign the True Numbers 
+# #     properties, at least by providing more guidance to the user.  
+# uniqueDescriptors(financeData)
+# 
 
 
 # OLD FRAMEWORK FOR EARLY POTENTIAL SOLUTION #
