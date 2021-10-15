@@ -181,6 +181,14 @@ makeListOfPresentVariableCodes <- function(variableNamesList) {
 #     "us;..." string varies per DF.
 
 makePartialsDFs <- function(acsData) {
+  # ### Temporary Measure to suppress duplicate population accounts ###
+  # acsData <- acsData[!grepl(("B02001_001" | "B17020_001" | "B23025_001"),
+  #                           colnames(acsData))]
+  acsData <- acsData[!(grepl("B02001_001", colnames(acsData)) |
+                         grepl("B17020_001", colnames(acsData)) |
+                         grepl("B23025_001", colnames(acsData)))]
+  
+  
   # Make A list of the names columns that will be in every DF
   # state, county, tract, NAME, us;..., 
   consistentColumnNames <- c(colnames(acsData[grep("us;", colnames(acsData))]),
@@ -403,6 +411,12 @@ allPovTnums <- doubleFlatten(povertyStatusTnums)
 #employmentStatus
 allEmpTnums <- doubleFlatten(employmentStatusTnums)
 
+tnum.postObjects(allPopTnums)
+tnum.postObjects(allRaceTnums)
+tnum.postObjects(allPerCapTnums)
+tnum.postObjects(allPovTnums)
+tnum.postObjects(allEmpTnums)
+
 
 firstTrueNumbersACSDataSet <- tnum.objectsToDf((c(allPopTnums,
                                                   allRaceTnums,
@@ -419,12 +433,55 @@ duplicateTnums <- filter(firstTrueNumbersACSDataSet,
                          !grepl("B01003", firstTrueNumbersACSDataSet$tags))
 firstArchive <- dplyr::anti_join(firstTrueNumbersACSDataSet, duplicateTnums)
 
-tnum.authorize(ip = "10.231.32.101")
-
+# tnum.postFromLists(
+#   firstArchive$subject,
+#   firstArchive$property,
+#   firstArchive$numeric.value,
+#   firstArchive$error,
+#   firstArchive$unit,
+#   firstArchive$tags,
+#   noEmptyStrings = FALSE
+# )
 
 write.csv(firstTrueNumbersACSDataSet,
         "C:\\RStudioProjects\\ncnmeddDataTool\\firstTrueNumbersACSDataSet.csv", 
           row.names = FALSE)
+
+#pull just subjects and properties and make graph Path List
+subjects <- tnum.getDBPathList("subject", max = 150)
+tnum.graphPathList(subjects)
+
+properties <- tnum.getDBPathList("property", max = 150)
+tnum.graphPathList(properties)
+
+povertyTnums <- tnum.query(" * has poverty_level*", max = 200)
+povertyTnumsDF <- tnum.objectsToDf(povertyTnums)
+View(povertyTnumsDF)
+
+povertyTnums <- tnum.query(" * has poverty_level*", max = 200)
+povertyTnumsDF <- tnum.objectsToDf(povertyTnums)
+View(povertyTnumsDF)
+
+santaFePopulations <- tnum.query(query = 
+                                   " #county:santa_fe has population:estimated",
+                                 max = 100)
+moraCountyNativeAmericanPop <- tnum.query(query = 
+                                   " #county:mora# has race:native_american#",
+                                   max = 100)
+View(tnum.objectsToDf(moraCountyNativeAmericanPop))
+
+colfaxCountyLaborForce <- tnum.query(query = 
+                                " #county:colfax has labor_force:civilian#",
+                                max = 100)
+View(tnum.objectsToDf(colfaxCountyLaborForce))
+colfaxCountyLaborForceByTract <- tnum.query(query = 
+                                       " #county:colfax# has labor_force:civilian#",
+                                     max = 100)
+View(tnum.objectsToDf(colfaxCountyLaborForceByTract))
+
+lowPerCapitaTnums <- tnum.query(" * has #per_capita#", max = 30)
+lowPerCapitaTnumsDF <- tnum.objectsToDf(lowPerCapitaTnums)
+View(lowPerCapitaTnumsDF)
 
 
 testDF <- tnum.objectsToDf(allPopTnums)
