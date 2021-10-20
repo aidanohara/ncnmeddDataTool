@@ -85,7 +85,7 @@ generateCountyString <- function(nameString) {
 
 #https://www2.census.gov/programs-surveys/acs/tech_docs/statistical_testing/2019_Instructions_for_Stat_Testing_ACS.pdf
 convertACSMOEtoSE <- function(acsMOE) {
-  if(acsMOE > 0) {
+  if((acsMOE > 0) & (!is.na(acsMOE))) {
     return(acsMOE/1.645)
   } else {
     return(0)
@@ -93,8 +93,9 @@ convertACSMOEtoSE <- function(acsMOE) {
 }
 
 # MAKE A TRUE NUMBER  #
-makeTrueNumber <- function(aDataFrameRow, propertyClause, estimateColumnIndex,
-                           mOEColumnIndex, listOfTags, unitLabel) {
+makeTrueNumber <- function(aDataFrameRow, propertyClause, subAdjClause, 
+                           estimateColumnIndex, mOEColumnIndex, listOfTags, 
+                           unitLabel) {
   # generate a TNUM-county-string
   countyTitle <- generateCountyString(aDataFrameRow['NAME'])
   # test column entries for most specific geography NAME available.
@@ -110,6 +111,10 @@ makeTrueNumber <- function(aDataFrameRow, propertyClause, estimateColumnIndex,
                              colonSep(c("county", countyTitle)),
                              colonSep(c("tract", aDataFrameRow['tract'])))))
   }
+  if(!is.na(subAdjClause)) {
+    subjecter <- slashSep(c(subjecter, subAdjClause))
+    #print(subjecter)
+  }
   
   # set the value from the DF
   valueNumber <- as.integer(aDataFrameRow[estimateColumnIndex])
@@ -122,6 +127,7 @@ makeTrueNumber <- function(aDataFrameRow, propertyClause, estimateColumnIndex,
   #print("in make function")
   #print(propertyClause)
   # Make a single true number with the assigned value
+  print(listOfTags)
   aNum <- tnum.makeObject(
     subject = subjecter,
     error = convertACSMOEtoSE(as.integer(aDataFrameRow[mOEColumnIndex])),
@@ -147,9 +153,9 @@ userSetProperty <- function(columnNames) {
 extractTaggage <- function(columnStringWithTags) {
   bits <- str_split(columnStringWithTags, ";")
   lessBits <- tail(unlist(bits), n = -1)
-  commaSplitTest <- paste(lessBits, collapse = ",")
+  #commaSplitTest <- paste(lessBits, collapse = ",")
   #print(commaSplitTest)
-  return(commaSplitTest)
+  return(as.list(lessBits))
 }
 
 # Recieves column names, removes the stringy bits and chops off the tail of the 
@@ -234,8 +240,13 @@ makeTNumsFromPartialDF <- function(singleVariableDataFrame) {
   estimateColumnLabel <- colnames(
     singleVariableDataFrame[grep("Estimate",
                                  colnames(singleVariableDataFrame))])
-  propertyClauseRow <- getPropertyFromCode(estimateColumnLabel, 
+  if(is.na(getPropertyFromCode(estimateColumnLabel, 
+                               columnPropertyKeyWithTags)$columnNamesKeyCodes)){
+    return ()
+  } else {
+    propertyClauseRow <- getPropertyFromCode(estimateColumnLabel, 
                                         columnPropertyKeyWithTags)
+  }
   #print(propertyClauseRow$columnNamesKeyCode)
   # Next, set the tags, using extractTaggage, grep the "us;" column for the 
   #   functions input
@@ -244,14 +255,16 @@ makeTNumsFromPartialDF <- function(singleVariableDataFrame) {
   #print(listOfTags)
   
   if (!is.na(propertyClauseRow$columnTags)) {
-    listOfTags <- paste(listOfTags, propertyClauseRow$columnTags, sep = ",")
+    #listOfTags <- paste(listOfTags, propertyClauseRow$columnTags, sep = ",")
+    listOfTags <- append(listOfTags, propertyClauseRow$columnTags)
   }
   unitLabel <- NA
   if (!is.na(propertyClauseRow$unitTags)) {
     unitLabel <- propertyClauseRow$unitTags
     #print(unitLabel)
   }
-  listOfTags <- paste(listOfTags, ingestionTag, sep = ",")
+  #listOfTags <- paste(listOfTags, ingestionTag, sep = ",")
+  listOfTags <- append(listOfTags, ingestionTag)
   # retrieve and store an index for the est. and m.o.e. columns.
   estimateColumnIndex <- grep("Estimate", colnames(singleVariableDataFrame))
   mOEColumnIndex <- grep("Margin", colnames(singleVariableDataFrame))
@@ -266,7 +279,9 @@ makeTNumsFromPartialDF <- function(singleVariableDataFrame) {
   #consider using Append.
   theNums <- list()
   theNUMS <- as.list(apply(singleVariableDataFrame,MARGIN = 1, makeTrueNumber, 
-                    propertyClauseRow$columnNamesKeyCodes, estimateColumnIndex, 
+                    propertyClauseRow$columnNamesKeyCodes, 
+                    propertyClauseRow$subjectAdj,
+                    estimateColumnIndex, 
                     mOEColumnIndex, listOfTags, unitLabel, simplify = FALSE))
   return(theNUMS)
 }
@@ -379,18 +394,39 @@ doubleFlatten <- function(listOflistOfTnums) {
 }
 
 yearsForFirstDataSet <- c(2011,2013,2015,2017,2019)
-ingestionTag <<- "ingest:acsGroups1"
+yearsForSecDataSet <- c(2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019)
+
+#ingestionTag <<- "ingest:acsGroups1"
+ingestionTag <<- "ingest:acsGroup2"
 # Construct Data Frames
-listOfTotalPopulationDF <- lapply(yearsForFirstDataSet, acsDataRetriever,
+# listOfTotalPopulationDF <- lapply(yearsForFirstDataSet, acsDataRetriever,
+#                                   5, "state:35", acsCountyFips, "B01003")
+# listOfRacePopulationDF <- lapply(yearsForFirstDataSet, acsDataRetriever,
+#                                  5, "state:35", acsCountyFips, "B02001")
+# listOfPerCapIncomeDF <- lapply(yearsForFirstDataSet, acsDataRetriever,
+#                                5, "state:35", acsCountyFips, "B19301")
+# listOfPovertyStatusDF <- lapply(c(2013,2015,2017,2019), acsDataRetriever,
+#                                 5, "state:35", acsCountyFips, "B17020")
+# listOfEmploymentStatusDF <- lapply(yearsForFirstDataSet, acsDataRetriever,
+#                                    5, "state:35", acsCountyFips, "B23025")
+
+listOfTotalPopulationDF <- lapply(yearsForSecDataSet, acsDataRetriever,
                                   5, "state:35", acsCountyFips, "B01003")
-listOfRacePopulationDF <- lapply(yearsForFirstDataSet, acsDataRetriever,
+listOfRacePopulationDF <- lapply(yearsForSecDataSet, acsDataRetriever,
                                  5, "state:35", acsCountyFips, "B02001")
-listOfPerCapIncomeDF <- lapply(yearsForFirstDataSet, acsDataRetriever,
+listOfPerCapIncomeDF <- lapply(yearsForSecDataSet, acsDataRetriever,
                                5, "state:35", acsCountyFips, "B19301")
-listOfPovertyStatusDF <- lapply(c(2013,2015,2017,2019), acsDataRetriever,
+listOfPovertyStatusDF <- lapply(c(2013,2014,2015,2016,2017,2018,2019), 
+                                acsDataRetriever,
                                 5, "state:35", acsCountyFips, "B17020")
-listOfEmploymentStatusDF <- lapply(yearsForFirstDataSet, acsDataRetriever,
+listOfEmploymentStatusDF <- lapply(yearsForSecDataSet, acsDataRetriever,
                                    5, "state:35", acsCountyFips, "B23025")
+listOfEthnicicityDF <- lapply(yearsForSecDataSet, acsDataRetriever, 
+                              5, "state:35", acsCountyFips, "B03003")
+listOfSexByAgeDF <- lapply(yearsForSecDataSet, acsDataRetriever, 
+                         5, "state:35", acsCountyFips, "B01001")
+listOfHousingTenure <- lapply(yearsForSecDataSet, acsDataRetriever, 
+                              5, "state:35", acsCountyFips, "B11001")
 
 # Convert to Tnums
 totalPopulationTnums <- lapply(listOfTotalPopulationDF, tNumsFromDataSet)
@@ -398,6 +434,9 @@ racePopulationTnums <- lapply(listOfRacePopulationDF, tNumsFromDataSet)
 perCapIncomeTnums <- lapply(listOfPerCapIncomeDF, tNumsFromDataSet)
 povertyStatusTnums <- lapply(listOfPovertyStatusDF, tNumsFromDataSet)
 employmentStatusTnums <- lapply(listOfEmploymentStatusDF, tNumsFromDataSet)
+ethnicitiyTnums <- lapply(listOfEthnicicityDF, tNumsFromDataSet)
+#sexByAgeTnums <- lapply(listOfSexByAgeDF, tNumsFromDataSet)
+housingTenureTnums <- lapply(listOfHousingTenure, tNumsFromDataSet)
 
 
 # Collapse
@@ -410,19 +449,26 @@ allPerCapTnums <- doubleFlatten(perCapIncomeTnums)
 allPovTnums <- doubleFlatten(povertyStatusTnums)
 #employmentStatus
 allEmpTnums <- doubleFlatten(employmentStatusTnums)
+allEthnicTnums <- doubleFlatten(ethnicitiyTnums)
+allSexByAgeTnums <- doubleFlatten(sexByAgeTnums)
+allHousingTenTnums <- doubleFlatten(housingTenureTnums)
+
 
 tnum.postObjects(allPopTnums)
 tnum.postObjects(allRaceTnums)
 tnum.postObjects(allPerCapTnums)
 tnum.postObjects(allPovTnums)
 tnum.postObjects(allEmpTnums)
+tnum.postObjects(allEthnicTnums)
+#tnum.postObjects(allSexByAgeTnums)
+tnum.postObjects(allHousingTenTnums)
 
 
-firstTrueNumbersACSDataSet <- tnum.objectsToDf((c(allPopTnums,
-                                                  allRaceTnums,
-                                                  allPovTnums,
-                                                  allPerCapTnums,
-                                                  allEmpTnums)))
+# firstTrueNumbersACSDataSet <- tnum.objectsToDf((c(allPopTnums,
+#                                                   allRaceTnums,
+#                                                   allPovTnums,
+#                                                   allPerCapTnums,
+#                                                   allEmpTnums)))
 
 # remove some duplicate tnums #
 # need to remove: B02001_001, B17020_001, B23025_001.
@@ -497,55 +543,96 @@ tn[[5]] <- allEmpTnums[[3]]
 
 # The following are the framework for codifying the properties
 #   2011 column name, minding poverty status by age
-columnNamesFirst <- c(colnames(totalPopulationAlone2011),
-                      colnames(populationByRace2011),
-                      colnames(perCapitaIncome2011),
-                      colnames(povertyStatusByAge2013),
-                      colnames(employmentStatus2011))
+columnNamesFirst <- c(colnames(listOfTotalPopulationDF[[1]]),
+                      colnames(listOfRacePopulationDF[[1]]),
+                      colnames(listOfPerCapIncomeDF[[1]]),
+                      colnames(listOfPovertyStatusDF[[1]]),
+                      colnames(listOfEmploymentStatusDF[[1]]),
+                      colnames(listOfEthnicicityDF[[1]]),
+                      colnames(listOfSexByAgeDF[[1]]),
+                      colnames(listOfHousingTenure[[1]]))
+
 oldEstimateColumns <- columnNamesFirst[grep("Estimate",columnNamesFirst)]
 
 # 2019 column names
-columnNamesRecent <- c(colnames(totalPopulationAlone2019),
-                        colnames(populationByRace2019),
-                        colnames(perCapitaIncome2019),
-                        colnames(povertyStatusByAge2019),
-                        colnames(employmentStatus2019))
-
-recentEstimateColumns <- columnNamesRecent[grep("Estimate",columnNamesRecent)]
+# columnNamesRecent <- c(colnames(totalPopulationAlone2019),
+#                         colnames(populationByRace2019),
+#                         colnames(perCapitaIncome2019),
+#                         colnames(povertyStatusByAge2019),
+#                         colnames(employmentStatus2019))
+# 
+# recentEstimateColumns <- columnNamesRecent[grep("Estimate",columnNamesRecent)]
  #raw data storage of column names
-columnNamesKey <- data.frame(oldEstimateColumns,recentEstimateColumns)
+#columnNamesKey <- data.frame(oldEstimateColumns,recentEstimateColumns)
+columnNamesKey <- data.frame(oldEstimateColumns)
 
 codifyProperties <- function(columnNameKeyRow) {
-  #print(columnNameKeyRow[c('oldEstimateColumns','recentEstimateColumns')])
+  print(columnNameKeyRow[c('oldEstimateColumns','recentEstimateColumns')])
   my.property <- readline(prompt = paste("property clause: "))
   return(my.property)
 }
+addAnySubjectAdjective <- function(columnNameKeyRow) {
+  print(columnNameKeyRow['oldEstimateColumns'])
+  my.property <- readline(prompt = paste("subject adjective: "))
+}
+
 addAnyPropertyTags <- function(columnPropertyKeyRow) {
-  #print(columnPropertyKeyRow[c('oldEstimateColumns','recentEstimateColumns',
-  #                         'columnNameKeyCodes')])
+  print(columnPropertyKeyRow[c('oldEstimateColumns','recentEstimateColumns',
+                          'columnNameKeyCodes')])
   my.property <- readline(prompt = paste("extra tags: "))
   return(my.property)
 }
 addUnits <- function(columnNameKeyRow) {
-  #print(columnNameKeyRow[c('oldEstimateColumns','recentEstimateColumns')])
+  print(columnNameKeyRow[c('oldEstimateColumns','recentEstimateColumns')])
   my.property <- readline(prompt = paste("specified units: "))
   return(my.property)
 }
 
+# setNewColumnCodes <- function(oldDataSet,
+#                               recentDataSet) {
+#   oldColNames <- lapply(oldDataSet, colnames)
+#   newColNames <- lapply(recentDataSet, colnames)
+#   oldEstimateColumns <- oldColNames[grep("Estimate",oldColNames)]
+#   recentEstimateColumns <- newColNames[grep("Estimate",newColNames)]
+#   
+#   
+#   columnNamesKey <- data.frame(oldEstimateColumns,recentEstimateColumns)
+#   writeBits <- function(columnNamesKeyRow) {
+#     print(columnNamesKeyRow['oldEstimateColumns'])
+#     propertyClause <- readline(prompt = paste("property clause: "))
+#     extraTags <- readline(prompt = paste("extra tags: "))
+#     anyUnits <- readline(prompt = paste("specified units: "))
+#     return(c(propertyClause, extraTags, anyUnits))
+#   }
+#   columnNamesCodes <- apply(columnNamesKey, MARGIN = 1, writeBits)
+#   columnPropertyKey <- cbind(columnNamesKey, columnNamesCodes)
+#   return(columnPropertyKey)
+# }
 
 columnNamesKeyCodes <- apply(columnNamesKey, MARGIN = 1, codifyProperties)
-
 columnPropertyKey <- cbind(columnNamesKey,columnNamesKeyCodes)
-
+subjectAdj <- apply(columnPropertyKey, MARGIN = 1, addAnySubjectAdjective)
 columnTags <- apply(columnPropertyKey, MARGIN = 1, addAnyPropertyTags)
-
 unitTags <- apply(columnNamesKey, MARGIN = 1, addUnits)
-columnPropertyKeyWithTags <- cbind(columnPropertyKey, columnTags, unitTags)
+
+
+
+columnPropertyKeyWithTags <- cbind(columnPropertyKey, subjectAdj, columnTags, unitTags)
 columnPropertyKeyWithTags$columnTags[columnPropertyKeyWithTags$columnTags ==
                                        ""] <- NA
 columnPropertyKeyWithTags$unitTags[columnPropertyKeyWithTags$unitTags ==
                                        ""] <- NA
+columnPropertyKeyWithTags$columnNamesKeyCodes[columnPropertyKeyWithTags$columnNamesKeyCodes ==
+                                     ""] <- NA
+columnPropertyKeyWithTags$subjectAdj[columnPropertyKeyWithTags$subjectAdj ==
+                                     ""] <- NA
 columnPropertyKeyWithTags <<- columnPropertyKeyWithTags
+
+#####
+# columnPropertyKeyWithTags$subjectAdj[90] <- "household:family:householder:female"
+# > columnPropertyKeyWithTags$subjectAdj[91] <- "household:family:householder:male"
+# > columnPropertyKeyWithTags$subjectAdj[92] <- "household:family"
+# > columnPropertyKeyWithTags$columnTags[92] <- "other_family"
 
 getPropertyFromCode <- function(columnLabel, columnPropertyKeyWithTags) {
   #work the column label down to just the variable code
@@ -556,6 +643,7 @@ getPropertyFromCode <- function(columnLabel, columnPropertyKeyWithTags) {
   return(filter(columnPropertyKeyWithTags,
                 str_detect(oldEstimateColumns, columnVarCode)))
 }
+
 
 # # specifierSorter <- function(dataSet) {
 # #   
