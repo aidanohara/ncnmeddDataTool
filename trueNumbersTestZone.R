@@ -121,10 +121,8 @@ makeTrueNumber <- function(aDataFrameRow, propertyClause, subAdjClause,
   
   # tests to be sure everything got set just right.
   #print(subjecter)
-  #print(property)
   #print(valueNumber)
   #print(listOfTags)
-  #print("in make function")
   #print(propertyClause)
   # Make a single true number with the assigned value
   print(listOfTags)
@@ -141,18 +139,13 @@ makeTrueNumber <- function(aDataFrameRow, propertyClause, subAdjClause,
   return(aNum)
 }
 
-# function for user input to parse the variable name into a TNUM property clause
-userSetProperty <- function(columnNames) {
-  print(columnNames)
-  print("example: race:some_other:two_plus_races/population:estimated")
-  my.property <- readline(prompt = paste("property clause: "))
-  return(my.property)
-}
 
 # rips up the "us;year:survey:etc..." into a list of usable TNUM tags
 extractTaggage <- function(columnStringWithTags) {
   bits <- str_split(columnStringWithTags, ";")
   lessBits <- tail(unlist(bits), n = -1)
+  #code for producing a comma split string of tags
+  #tnums wasn't happy about it so its out for now. 
   #commaSplitTest <- paste(lessBits, collapse = ",")
   #print(commaSplitTest)
   return(as.list(lessBits))
@@ -162,6 +155,7 @@ extractTaggage <- function(columnStringWithTags) {
 #     variable code, removes the duplicates and then returns a list of numbered
 #     group variable code names, present in the original list.
 # "Estimate!!Total:!!...other race/B02001_009E" -> "B02001_009" 
+# ACS DATA SPECIFIC
 makeListOfPresentVariableCodes <- function(variableNamesList) {
   refList <- lapply(variableNamesList, str_split, "/")
   getJustVarCode <- function(listOfNameStrings) {
@@ -276,7 +270,6 @@ makeTNumsFromPartialDF <- function(singleVariableDataFrame) {
   #    Calling upon makeTrueNumber from earlier with each row of the partial DF
   # One True Number per row, all in a big list.
   
-  #consider using Append.
   theNums <- list()
   theNUMS <- as.list(apply(singleVariableDataFrame,MARGIN = 1, makeTrueNumber, 
                     propertyClauseRow$columnNamesKeyCodes, 
@@ -428,6 +421,148 @@ listOfSexByAgeDF <- lapply(yearsForSecDataSet, acsDataRetriever,
 listOfHousingTenure <- lapply(yearsForSecDataSet, acsDataRetriever, 
                               5, "state:35", acsCountyFips, "B11001")
 
+# The following are the framework for codifying the properties
+# very bogus and hard coded. but it works don't it.
+
+#   2011 column name, minding poverty status by age
+columnNamesFirst <- c(colnames(listOfTotalPopulationDF[[1]]),
+                      colnames(listOfRacePopulationDF[[1]]),
+                      colnames(listOfPerCapIncomeDF[[1]]),
+                      colnames(listOfPovertyStatusDF[[1]]),
+                      colnames(listOfEmploymentStatusDF[[1]]),
+                      colnames(listOfEthnicicityDF[[1]]),
+                      colnames(listOfSexByAgeDF[[1]]),
+                      colnames(listOfHousingTenure[[1]]))
+
+oldEstimateColumns <- columnNamesFirst[grep("Estimate",columnNamesFirst)]
+
+# 2019 column names
+# columnNamesRecent <- c(colnames(totalPopulationAlone2019),
+#                         colnames(populationByRace2019),
+#                         colnames(perCapitaIncome2019),
+#                         colnames(povertyStatusByAge2019),
+#                         colnames(employmentStatus2019))
+# 
+# recentEstimateColumns <- columnNamesRecent[grep("Estimate",columnNamesRecent)]
+#raw data storage of column names
+#columnNamesKey <- data.frame(oldEstimateColumns,recentEstimateColumns)
+columnNamesKey <- data.frame(oldEstimateColumns)
+
+codifyProperties <- function(columnNameKeyRow) {
+  print(columnNameKeyRow[c('oldEstimateColumns','recentEstimateColumns')])
+  my.property <- readline(prompt = paste("property clause: "))
+  return(my.property)
+}
+addAnySubjectAdjective <- function(columnNameKeyRow) {
+  print(columnNameKeyRow['oldEstimateColumns'])
+  my.property <- readline(prompt = paste("subject adjective: "))
+}
+
+addAnyPropertyTags <- function(columnPropertyKeyRow) {
+  print(columnPropertyKeyRow[c('oldEstimateColumns','recentEstimateColumns',
+                               'columnNameKeyCodes')])
+  my.property <- readline(prompt = paste("extra tags: "))
+  return(my.property)
+}
+addUnits <- function(columnNameKeyRow) {
+  print(columnNameKeyRow[c('oldEstimateColumns','recentEstimateColumns')])
+  my.property <- readline(prompt = paste("specified units: "))
+  return(my.property)
+}
+
+# setNewColumnCodes <- function(oldDataSet,
+#                               recentDataSet) {
+#   oldColNames <- lapply(oldDataSet, colnames)
+#   newColNames <- lapply(recentDataSet, colnames)
+#   oldEstimateColumns <- oldColNames[grep("Estimate",oldColNames)]
+#   recentEstimateColumns <- newColNames[grep("Estimate",newColNames)]
+#   
+#   
+#   columnNamesKey <- data.frame(oldEstimateColumns,recentEstimateColumns)
+#   writeBits <- function(columnNamesKeyRow) {
+#     print(columnNamesKeyRow['oldEstimateColumns'])
+#     propertyClause <- readline(prompt = paste("property clause: "))
+#     extraTags <- readline(prompt = paste("extra tags: "))
+#     anyUnits <- readline(prompt = paste("specified units: "))
+#     return(c(propertyClause, extraTags, anyUnits))
+#   }
+#   columnNamesCodes <- apply(columnNamesKey, MARGIN = 1, writeBits)
+#   columnPropertyKey <- cbind(columnNamesKey, columnNamesCodes)
+#   return(columnPropertyKey)
+# }
+
+columnNamesKeyCodes <- apply(columnNamesKey, MARGIN = 1, codifyProperties)
+columnPropertyKey <- cbind(columnNamesKey,columnNamesKeyCodes)
+subjectAdj <- apply(columnPropertyKey, MARGIN = 1, addAnySubjectAdjective)
+columnTags <- apply(columnPropertyKey, MARGIN = 1, addAnyPropertyTags)
+unitTags <- apply(columnNamesKey, MARGIN = 1, addUnits)
+
+
+
+columnPropertyKeyWithTags <- cbind(columnPropertyKey, subjectAdj, columnTags, unitTags)
+columnPropertyKeyWithTags$columnTags[columnPropertyKeyWithTags$columnTags ==
+                                       ""] <- NA
+columnPropertyKeyWithTags$unitTags[columnPropertyKeyWithTags$unitTags ==
+                                     ""] <- NA
+columnPropertyKeyWithTags$columnNamesKeyCodes[columnPropertyKeyWithTags$columnNamesKeyCodes ==
+                                                ""] <- NA
+columnPropertyKeyWithTags$subjectAdj[columnPropertyKeyWithTags$subjectAdj ==
+                                       ""] <- NA
+columnPropertyKeyWithTags <<- columnPropertyKeyWithTags
+
+#####
+# columnPropertyKeyWithTags$subjectAdj[90] <- "household:family:householder:female"
+# > columnPropertyKeyWithTags$subjectAdj[91] <- "household:family:householder:male"
+# > columnPropertyKeyWithTags$subjectAdj[92] <- "household:family"
+# > columnPropertyKeyWithTags$columnTags[92] <- "other_family"
+
+getPropertyFromCode <- function(columnLabel, columnPropertyKeyWithTags) {
+  #work the column label down to just the variable code
+  columnVarCode <- tail(unlist(str_split(columnLabel, "/")),1)
+  #Select the row that contains a match for columnLabel
+  # return(unname(filter(columnPropertyKeyWithTags,
+  #               str_detect(oldEstimateColumns, "B02001_003E"))['columnNamesKeyCodes']))
+  return(filter(columnPropertyKeyWithTags,
+                str_detect(oldEstimateColumns, columnVarCode)))
+}
+
+#Construct Tnums to define poverty status by age age brackets.
+# elders  85 and over
+# seniors 75 to 84
+# older_adults 60 - 74
+# adults 18 - 59
+# adolescents 12 - 17
+# children 6 - 11
+# young_children 6 and under
+
+# subject    has   property   = value
+# elders have lower age limit = 85 years
+ageSubjects <- as.list("elders",
+                       "seniors",
+                       "older_adults",
+                       "adults",
+                       "adolescents",
+                       "children",
+                       "young_children")
+
+ageProperties <- as.list("age_limit:lower",
+                         "age_limit:upper")
+
+ageTags <- as.list("acsPovertyData",
+                   ingestionTag,
+                   "group:B17020")
+# 
+# makeAgeBracketTnum <- function(ageSubject, ageProperties,
+#                                ageTags) {
+#   if(ageSubject == "elder") {
+#     tnum.makeObject(subject = ageSubject,
+#                     property = ageProperties[[2]]
+#   }
+#   tnum.makeObject(subject = ageSubject,
+#                   )
+# }
+
+
 # Convert to Tnums
 totalPopulationTnums <- lapply(listOfTotalPopulationDF, tNumsFromDataSet)
 racePopulationTnums <- lapply(listOfRacePopulationDF, tNumsFromDataSet)
@@ -493,6 +628,8 @@ write.csv(firstTrueNumbersACSDataSet,
         "C:\\RStudioProjects\\ncnmeddDataTool\\firstTrueNumbersACSDataSet.csv", 
           row.names = FALSE)
 
+
+#Tnum DB access tests.
 #pull just subjects and properties and make graph Path List
 subjects <- tnum.getDBPathList("subject", max = 150)
 tnum.graphPathList(subjects)
@@ -541,110 +678,16 @@ tn[[4]] <- allPerCapTnums[[500]]
 tn[[5]] <- allEmpTnums[[3]]
 
 
-# The following are the framework for codifying the properties
-#   2011 column name, minding poverty status by age
-columnNamesFirst <- c(colnames(listOfTotalPopulationDF[[1]]),
-                      colnames(listOfRacePopulationDF[[1]]),
-                      colnames(listOfPerCapIncomeDF[[1]]),
-                      colnames(listOfPovertyStatusDF[[1]]),
-                      colnames(listOfEmploymentStatusDF[[1]]),
-                      colnames(listOfEthnicicityDF[[1]]),
-                      colnames(listOfSexByAgeDF[[1]]),
-                      colnames(listOfHousingTenure[[1]]))
 
-oldEstimateColumns <- columnNamesFirst[grep("Estimate",columnNamesFirst)]
 
-# 2019 column names
-# columnNamesRecent <- c(colnames(totalPopulationAlone2019),
-#                         colnames(populationByRace2019),
-#                         colnames(perCapitaIncome2019),
-#                         colnames(povertyStatusByAge2019),
-#                         colnames(employmentStatus2019))
-# 
-# recentEstimateColumns <- columnNamesRecent[grep("Estimate",columnNamesRecent)]
- #raw data storage of column names
-#columnNamesKey <- data.frame(oldEstimateColumns,recentEstimateColumns)
-columnNamesKey <- data.frame(oldEstimateColumns)
-
-codifyProperties <- function(columnNameKeyRow) {
-  print(columnNameKeyRow[c('oldEstimateColumns','recentEstimateColumns')])
-  my.property <- readline(prompt = paste("property clause: "))
-  return(my.property)
-}
-addAnySubjectAdjective <- function(columnNameKeyRow) {
-  print(columnNameKeyRow['oldEstimateColumns'])
-  my.property <- readline(prompt = paste("subject adjective: "))
-}
-
-addAnyPropertyTags <- function(columnPropertyKeyRow) {
-  print(columnPropertyKeyRow[c('oldEstimateColumns','recentEstimateColumns',
-                          'columnNameKeyCodes')])
-  my.property <- readline(prompt = paste("extra tags: "))
-  return(my.property)
-}
-addUnits <- function(columnNameKeyRow) {
-  print(columnNameKeyRow[c('oldEstimateColumns','recentEstimateColumns')])
-  my.property <- readline(prompt = paste("specified units: "))
-  return(my.property)
-}
-
-# setNewColumnCodes <- function(oldDataSet,
-#                               recentDataSet) {
-#   oldColNames <- lapply(oldDataSet, colnames)
-#   newColNames <- lapply(recentDataSet, colnames)
-#   oldEstimateColumns <- oldColNames[grep("Estimate",oldColNames)]
-#   recentEstimateColumns <- newColNames[grep("Estimate",newColNames)]
-#   
-#   
-#   columnNamesKey <- data.frame(oldEstimateColumns,recentEstimateColumns)
-#   writeBits <- function(columnNamesKeyRow) {
-#     print(columnNamesKeyRow['oldEstimateColumns'])
-#     propertyClause <- readline(prompt = paste("property clause: "))
-#     extraTags <- readline(prompt = paste("extra tags: "))
-#     anyUnits <- readline(prompt = paste("specified units: "))
-#     return(c(propertyClause, extraTags, anyUnits))
-#   }
-#   columnNamesCodes <- apply(columnNamesKey, MARGIN = 1, writeBits)
-#   columnPropertyKey <- cbind(columnNamesKey, columnNamesCodes)
-#   return(columnPropertyKey)
+#Grave YARD#
+# # function for user input to parse the variable name into a TNUM property clause
+# userSetProperty <- function(columnNames) {
+#   print(columnNames)
+#   print("example: race:some_other:two_plus_races/population:estimated")
+#   my.property <- readline(prompt = paste("property clause: "))
+#   return(my.property)
 # }
-
-columnNamesKeyCodes <- apply(columnNamesKey, MARGIN = 1, codifyProperties)
-columnPropertyKey <- cbind(columnNamesKey,columnNamesKeyCodes)
-subjectAdj <- apply(columnPropertyKey, MARGIN = 1, addAnySubjectAdjective)
-columnTags <- apply(columnPropertyKey, MARGIN = 1, addAnyPropertyTags)
-unitTags <- apply(columnNamesKey, MARGIN = 1, addUnits)
-
-
-
-columnPropertyKeyWithTags <- cbind(columnPropertyKey, subjectAdj, columnTags, unitTags)
-columnPropertyKeyWithTags$columnTags[columnPropertyKeyWithTags$columnTags ==
-                                       ""] <- NA
-columnPropertyKeyWithTags$unitTags[columnPropertyKeyWithTags$unitTags ==
-                                       ""] <- NA
-columnPropertyKeyWithTags$columnNamesKeyCodes[columnPropertyKeyWithTags$columnNamesKeyCodes ==
-                                     ""] <- NA
-columnPropertyKeyWithTags$subjectAdj[columnPropertyKeyWithTags$subjectAdj ==
-                                     ""] <- NA
-columnPropertyKeyWithTags <<- columnPropertyKeyWithTags
-
-#####
-# columnPropertyKeyWithTags$subjectAdj[90] <- "household:family:householder:female"
-# > columnPropertyKeyWithTags$subjectAdj[91] <- "household:family:householder:male"
-# > columnPropertyKeyWithTags$subjectAdj[92] <- "household:family"
-# > columnPropertyKeyWithTags$columnTags[92] <- "other_family"
-
-getPropertyFromCode <- function(columnLabel, columnPropertyKeyWithTags) {
-  #work the column label down to just the variable code
-  columnVarCode <- tail(unlist(str_split(columnLabel, "/")),1)
-  #Select the row that contains a match for columnLabel
-  # return(unname(filter(columnPropertyKeyWithTags,
-  #               str_detect(oldEstimateColumns, "B02001_003E"))['columnNamesKeyCodes']))
-  return(filter(columnPropertyKeyWithTags,
-                str_detect(oldEstimateColumns, columnVarCode)))
-}
-
-
 # # specifierSorter <- function(dataSet) {
 # #   
 # #   columnParser <- function(dataSetColumnName) {
