@@ -2,6 +2,9 @@
 #author: Aidan O'Hara
 #date: 10/26/2021
 
+
+library(stringr)
+library(tnum)
 ### True numbers to sentences
 
 # subject #
@@ -86,3 +89,4 @@ tnumToSentence <- function(someTrueNumber) {
     return(paste(tnumSentenceWithYear, ".", sep = ""))
   })
 }
+

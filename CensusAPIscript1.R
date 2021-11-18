@@ -77,6 +77,7 @@ getGroupVariableNames <- function(groupName) {
 
 parseGroupVariables <- function(groupVariables) {
   refList <- bind_rows(lapply(groupVariables, getGroupVariableNames))
+  print(refList)
   refListLess <- (refList[,c("name","label")])
   refListNoAnno <- refListLess[!grepl("A$", refListLess$name),]
   return(refListNoAnno)
@@ -181,8 +182,60 @@ acsDataRetriever <- function(year, term, stateCode, countyGeos, groupVariables){
 #acs5Data2019 <- acsDataRetriever(2019, 5, "state:35", 
 #                                 acsCountyFips, groupsForVariables)
 
+saipeRetriever <- function(stateCode, countyGeos) {
+  #set the survey Name
+  surveyName <- "timeseries/poverty/saipe"
+  #set the state Code
+  stateCode <<- stateCode
+  #set up Variable scope, done in TNUM DIALOG NOTE
+  singleVariables <- c("NAME",
+                       "YEAR",
+                       "time",
+                       "SAEPOVALL_PT",
+                       "SAEPOVALL_MOE",
+                       "SAEPOV0_4_PT",
+                       "SAEPOV0_4_MOE",
+                       "SAEPOV5_17R_PT",
+                       "SAEPOV5_17R_MOE",
+                       "SAEPOVRT0_4_PT",
+                       "SAEPOVRT0_4_MOE",
+                       "SAEMHI_PT",
+                       "SAEMHI_MOE")
+  saipeLabels <- listCensusMetadata(name = "timeseries/poverty/saipe", 
+                                    type = "variables")
+  saipeLabelsRefined <- saipeLabels[ saipeLabels$name %in% singleVariables, ]
+  #Call upon getCensus to compile national, state, and county observations 
+  countyParts <- lapply(countyGeos, function(countyGeos) {
+    getCensus(name = surveyName,
+              vars = saipeLabelsRefined$name,
+              region = paste("county:", countyGeos),
+              regionin = stateCode)
+  })
+  statePart <- getCensus(name = surveyName,
+                         vars = saipeLabelsRefined$name,
+                         region = stateCode)
+  usPart <- getCensus(name = surveyName,
+                      vars = saipeLabelsRefined$name,
+                      region = "us:*")
+  
+    # into a single DF?
+  rawData <- gtools::smartbind(bind_rows(countyParts), 
+                               statePart, usPart,  fill = NA)
+  #switch census variable names for their labels?
+  labeledData <- subGroupVarLabels(rawData, saipeLabelsRefined)
+  
+  #Generate some object that contains the year, survey name, and
+  #  "group"
+  # Attach it to the DF or pass it along to later
+  return(labeledData)
+}
 
 
+
+
+
+### SAIPE Retrieval ###
+### https://api.census.gov/data/timeseries/poverty/saipe/variables.html
 
 
 ##### OLD CODE #####
